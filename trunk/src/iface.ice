@@ -1,22 +1,23 @@
 module agh {
 	
-	interface ISlaveCallback {
-		int disconnect(int reason);
-	};
-
-	dictionary<int, int> CodecsMap;
+	sequence<int> prefferedCodecs;
 	
 	interface ISlave {
-		int requestConnect();
-		CodecsMap getAvailableCodecs();
-		int setCodec(int codec);
-		int setDestinationPort(int port);
-		int getSourcePort();
-		int startTransmission();
-		int disconnect(int reason);
-		void setCallback(ISlaveCallback *callback);
-		int resetCodec(int codec);
-		ISlaveCallback* getCallback();
+		int remoteConnect();
+		int remoteDisconnect(int reason);
+		
+		int remotePing();
+		
+		prefferedCodecs remoteGetPrefferedOutgoingCodec();
+		prefferedCodecs remoteGetPrefferedIncomingCodec();
+		int remoteSetOutgoingCodec(int codec);
+		int remoteResetOutgoingCodec(int codec);
+		
+		int remoteSetDestinationPort(int port);
+		int remoteGetDestinationPort(int port);
+		int remoteGetSourcePort();
+		
+		int remoteStartTransmission();
 	};
 
 };

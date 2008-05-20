@@ -19,54 +19,52 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tools.h"
-#include <cc++/socket.h>
-#include <Ice/Ice.h>
-#include <cstdio>
-#include <strstream>
-#include <boost/regex.hpp>
+#ifndef __MASTER_H__INCLUDED__
+#define __MASTER_H__INCLUDED__
 
-using namespace agh;
+#include "transceiver.h"
+
+#include <cc++/address.h>
+
 using namespace ost;
-using namespace std;
-using namespace boost;
 
 namespace agh {
 
-IPV4Address getRemoteAddressFromConnection(const Ice::ConnectionPtr& con) {
+class ICallback {
+	
+public:
+	virtual ~ICallback() = 0;
+	
+	virtual bool onIncomingCall(const IPV4Address& addr) = 0;
+	
+	virtual bool onDisconnect() = 0;
+	virtual bool onConnect() = 0;
+};
 
-	regex expr("^remote address = ([.0-9]+):[0-9]+");
-
-	string text = con->toString();
-	stringstream stream(text);
-	string line;
-
-	cmatch what;
-
-	while (getline(stream, line)) {
-		if (regex_match(line.c_str(), what, expr)) {
-			cout << what[1] << endl;
-		}
-	}
-	return IPV4Address(String(what[1]));
-}
-
-IPV4Address getLocalAddressFromConnection(const Ice::ConnectionPtr& con) {
-
-	regex expr("^local address = ([.0-9]+):[0-9]+");
-
-	string text = con->toString();
-	stringstream stream(text);
-	string line;
-
-	cmatch what;
-
-	while (getline(stream, line)) {
-		if (regex_match(line.c_str(), what, expr)) {
-			cout << what[1] << endl;
-		}
-	}
-	return IPV4Address(String(what[1]));
-}
+class IMaster {
+	
+public:
+	
+	virtual bool isConnected() const = 0;
+	
+	virtual int setLocalPort(int port) = 0;
+	virtual int getLocalPort() const = 0;
+	virtual int getDestinationPort() const = 0;
+	virtual const IPV4Address *getRemoteHost() const = 0;
+	virtual const IPV4Address *getLocalHost() const = 0;
+	
+	virtual int connect(const IPV4Address& addr, int icePort) = 0;
+	virtual int disconnect() = 0;
+	
+	virtual int startTransmission() = 0;
+	
+	virtual int registerCallback(ICallback *callback) = 0;
+	virtual int unregisterCallback(int id) = 0;
+	
+	virtual int setTransceiver(ITransceiver *transceiver) = 0;
+	virtual int unsetTransceiver() = 0;
+};
 
 } /* namespace agh */
+
+#endif /* __MASTER_H__INCLUDED__ */

@@ -2,7 +2,7 @@ CXX = g++
 SLICE = slice2cpp
 
 CXXFLAGS = -c -Wall -ansi -pedantic -g -I.
-LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex
+LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx
 
 OBJS = iface.o fsm.o tools.o
 TARGET = app
