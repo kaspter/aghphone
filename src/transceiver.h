@@ -38,6 +38,7 @@ typedef struct {
 	char *inputBuffer;
 	char *outputBuffer;
 	bool outputReady;
+	bool inputReady;
 } CallbackData; 
 
 
