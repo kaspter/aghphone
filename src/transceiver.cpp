@@ -40,9 +40,9 @@ static int callback(  const void *inputBuffer, void *outputBuffer,
 	(void) timeInfo;
 
 	memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
-	if( data.outputReady ) {
+	if( data->outputReady ) {
 		memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
-		data.outputReady = false;
+		data->outputReady = false;
 	}
 
 	return paContinue;
