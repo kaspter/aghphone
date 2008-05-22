@@ -35,6 +35,9 @@ class ICallback {
 public:
 	virtual ~ICallback() = 0;
 	
+	/**
+	 * if returns false the call is rejected
+	 */
 	virtual bool onIncomingCall(const IPV4Address& addr) = 0;
 	
 	virtual bool onDisconnect() = 0;
