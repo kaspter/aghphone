@@ -464,14 +464,10 @@ int main(int argc, char *argv[]) {
 
 	sleep(6000);
 */
-
 	ITransceiver *itr = new TransceiverPa();
-	
-	itr->setLocalEndpoint(argv[0], atoi(argv[1]));
-	itr->setRemoteEndpoint(argv[2], atoi(argv[3]));
-	
+	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
+	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));	
 	itr->start();
-	
 	while(1) {
 		cout << "." << endl;
 		sleep(1000);

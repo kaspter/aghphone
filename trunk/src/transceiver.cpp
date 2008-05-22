@@ -129,13 +129,13 @@ IDevice& DeviceFactoryPa::getDefaultOutputDevice() const
 
 TransceiverPa::TransceiverPa()
 {
-	
 	PaError err = Pa_Initialize();
 
 	if( err != paNoError ) {
 		/*
 		 * TODO: Implement logging of portaudio initialization failure
 		 */
+		 cout << Pa_GetErrorText(err) << endl;
 	} else {
 		devMgr = new DeviceFactoryPa();
 		
@@ -146,6 +146,7 @@ TransceiverPa::TransceiverPa()
 		remotePort = -1;
 		
 		tCore = NULL;
+		cout << "Transceiver created successfuly" << endl;
 	}
 }
 
@@ -210,16 +211,20 @@ int TransceiverPa::setRemoteEndpoint(const IPV4Address& addr, int port)
 
 int TransceiverPa::start()
 {
-	if( (localPort == -1 ) || ( !localAddress ) ) {
+	if( (localPort == -1 ) ) {
+		cout << "Endpoint error: " << localAddress << ":" << localPort << endl;
 		return TransceiverStartResult::LOCAL_ENDPOINT_ERROR;
 	}
 	
 	if( ( remotePort == -1 ) || ( !remoteAddress) ) {
+		printf("error2\n");
 		return TransceiverStartResult::REMOTE_ENDPOINT_ERROR;
 	}
 		
 	tCore = new TransceiverCore(this);
 	tCore->start();
+	
+	cout << "Transceiver core started" << endl;
 	
 	return TransceiverStartResult::SUCCESS;
 }
@@ -257,15 +262,17 @@ void TransceiverCore::run()
 {
 	openStream();
 	
-	socket = new RTPSession( (IPV4Host&)(t->localAddress), t->localPort );
+	socket = new RTPSession( IPV4Host(t->localAddress.getAddress()), t->localPort );
+
 	socket->setSchedulingTimeout( 10000 );
 	//	  socket->setExpireTimeout(10000);
-
-	if( !socket->addDestination( (IPV4Host&)(t->remoteAddress), t->remotePort ) ) {
+	
+	
+	if( !socket->addDestination( IPV4Host(t->remoteAddress.getAddress()), t->remotePort ) ) {
 		/*
 		 * TODO: Implement ccrtp connection failure
 		 */
-		 
+		cout << "CCRTP destination connection failure: " << IPV4Host(t->remoteAddress.getAddress()) << ":" << t->remotePort << endl;
 		return;
 	}
 	
@@ -300,7 +307,7 @@ void TransceiverCore::run()
 	  	}
 
 	    packetCounter++;
-	    
+	    printf("timestamp: %d\n", packetCounter*160); fflush(stdout); 
 	    Thread::sleep(TimerPort::getTimer());
 	    TimerPort::incTimer(20);
     }
@@ -342,7 +349,7 @@ void TransceiverCore::openStream()
 		/*
 		 * TODO: Implement logging of stream opening failure
 		 */
-		 
+		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}
 
@@ -352,7 +359,7 @@ void TransceiverCore::openStream()
 		/*
 		 * TODO: Implement logging of stream starting failure
 		 */
-		
+		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}	
 } 
