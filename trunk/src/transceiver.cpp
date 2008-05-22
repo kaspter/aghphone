@@ -40,10 +40,10 @@ static int callback(  const void *inputBuffer, void *outputBuffer,
 	(void) timeInfo;
 
 	memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
-	if( data->outputReady ) {
+	//if( data->outputReady ) {
 		memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
-		data->outputReady = false;
-	}
+		//data->outputReady = false;
+	//}
 
 	return paContinue;
 }
@@ -311,7 +311,7 @@ void TransceiverCore::run()
 	  	} while ( (NULL != adu) && ( (size = adu->getSize()) > 0 ) );
 	    
 	    memcpy((void *)cData.outputBuffer, adu->getData(), 160);
-		cData.outputReady = true;
+		//cData.outputReady = true;
 
 	    packetCounter++;
 	    printf("timestamp: %d\n", packetCounter*160); fflush(stdout); 
