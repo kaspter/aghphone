@@ -40,10 +40,10 @@ static int callback(  const void *inputBuffer, void *outputBuffer,
 	(void) timeInfo;
 
 	memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
-	//if( data->outputReady ) {
+	if( data->outputReady ) {
 		memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
-		//data->outputReady = false;
-	//}
+		data->outputReady = false;
+	}
 
 	return paContinue;
 }
@@ -296,11 +296,13 @@ void TransceiverCore::run()
 	
 	int packetCounter = 0;
 	
+	for(int i=0;i<160;i++)
+		cData.outputBuffer[i] = 0;
+	
+	cData.outputReady = true;
+	
 	while(1) {
 		socket->putData(160*packetCounter,(const unsigned char *)cData.inputBuffer, 160);
-
-	    for(int i=0;i<160;i++)
-			cData.outputBuffer[i] = 0;
 
   		long size;
 	  	const AppDataUnit* adu;
@@ -308,10 +310,10 @@ void TransceiverCore::run()
 	  		adu = socket->getData(socket->getFirstTimestamp());
 	  		if( NULL == adu )
 	  			Thread::sleep(5);
-	  	} while ( (NULL != adu) && ( (size = adu->getSize()) > 0 ) );
+	  	} while ( (NULL == adu) || ( (size = adu->getSize()) == 0 ) );
 	    
 	    memcpy((void *)cData.outputBuffer, adu->getData(), 160);
-		//cData.outputReady = true;
+		cData.outputReady = true;
 
 	    packetCounter++;
 	    printf("timestamp: %d\n", packetCounter*160); fflush(stdout); 
