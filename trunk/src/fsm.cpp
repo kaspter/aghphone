@@ -428,12 +428,12 @@ int Terminal::remoteStartTransmission(const Ice::Current& cur) {
 } /* namespace agh */
 
 int main(int argc, char *argv[]) {
-	try {
+//	try {
 		// Set up a simple configuration that logs on the console.
 		BasicConfigurator::configure();
-	} catch(log4cxx::helpers::Exception& e) {
-		clog << e.what() << endl;
-	}
+//	} catch(log4cxx::helpers::Exception& e) {
+//		clog << e.what() << endl;
+//	}
 
 	int port;
 
