@@ -40,6 +40,8 @@ static int callback(  const void *inputBuffer, void *outputBuffer,
 	(void) timeInfo;
 
 	memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
+	data->inputReady = true;
+	
 	if( data->outputReady ) {
 		memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
 		data->outputReady = false;
@@ -302,21 +304,27 @@ void TransceiverCore::run()
 	cData.outputReady = true;
 	
 	while(1) {
-		socket->putData(160*packetCounter,(const unsigned char *)cData.inputBuffer, 160);
-
   		long size;
 	  	const AppDataUnit* adu;
+	  	bool nosound;
 	  	do {
+	  		nosound = true;
+	  		if( cData.inputReady ) {
+	  			socket->putData(160*packetCounter,(const unsigned char *)cData.inputBuffer, 160);
+	  			cData.inputReady = false;
+	  			nosound = false;
+	  			printf("timestamp: %d\n", packetCounter*160); fflush(stdout);
+	  			packetCounter++; 
+	  		}
+	  		
 	  		adu = socket->getData(socket->getFirstTimestamp());
-	  		if( NULL == adu )
+	  		if( (NULL == adu) && nosound)
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) == 0 ) );
 	    
 	    memcpy((void *)cData.outputBuffer, adu->getData(), 160);
 		cData.outputReady = true;
 
-	    packetCounter++;
-	    printf("timestamp: %d\n", packetCounter*160); fflush(stdout); 
 	    Thread::sleep(TimerPort::getTimer());
 	    TimerPort::incTimer(20);
     }
