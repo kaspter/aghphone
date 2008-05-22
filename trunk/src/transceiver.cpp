@@ -302,12 +302,12 @@ void TransmitterCore::run()
 	  	if( t->cData.inputReady ) {
 	  		t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
 	  		t->cData.inputReady = false;
-	  		printf("timestamp: %d\n", packetCounter*160); fflush(stdout);
+	  		//printf("transmitter timestamp: %d\n", packetCounter*160); fflush(stdout);
 	  		packetCounter++; 
 	  	}
 
-	    Thread::sleep(TimerPort::getTimer());
-	    TimerPort::incTimer(20);
+	    Thread::sleep(1);
+	    //TimerPort::incTimer(20);
     }
 }
 
@@ -343,6 +343,7 @@ void ReceiverCore::run()
 	    
 	    memcpy((void *)t->cData.outputBuffer, adu->getData(), 160);
 		t->cData.outputReady = true;
+		//printf("received packet\n"); fflush(stdout);
 		
 	    Thread::sleep(TimerPort::getTimer());
 	    TimerPort::incTimer(20);
