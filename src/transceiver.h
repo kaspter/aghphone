@@ -24,20 +24,115 @@
 
 #include <vector>
 #include <cc++/address.h>
+#include <string>
+
+#include <portaudio.h>
+#include <ccrtp/rtp.h>
 
 using namespace std;
 using namespace ost;
 
 namespace agh {
 
+typedef struct {
+	char *inputBuffer;
+	char *outputBuffer;
+} CallbackData; 
+
+
 class IDevice {
+public:
+	virtual ~IDevice() {}
+	virtual const string& getName() const = 0;
+	virtual int getID() const = 0;
+	virtual const string& getHostAPI() const = 0;
+
+	virtual double getDefaultLowInputLatency() const = 0;
+	virtual double getDefaultLowOutputLatency() const = 0;
+	virtual double getDefaultHighInputLatency() const = 0;
+	virtual double getDefaultHighOutputLatency() const = 0;
+	virtual double getDefaultSampleRate() const = 0;
+	virtual const vector<double>& getSupportedSampleRatesHalfDuplexInput() const = 0;
+	virtual const vector<double>& getSupportedSampleRatesHalfDuplexOutput() const = 0;
+	virtual const vector<double>& getSupportedSampleRatesFullDuplex() const = 0;
+
+	virtual int getSupportedChannelCountOutput() const = 0;
+	virtual int getSupportedChannelCountInput() const = 0;
+};
+
+class DevicePa : public IDevice {
+private:
+	string name;
+	string hostAPI;
+	int id;
+	double defLowInputLat, defLowOutputLat, defHighInputLat, defHighOutputLat;
+	double defSampleRate;
+	vector<double> sampleRatesHalfDupInput, sampleRatesHalfDupOutput,
+		sampleRatesFullDup;
+	int channelCountOutput, channelCountInput;
+public:
+	DevicePa(int index);
+
+	const string& getName() const { return (const string&)name; }
+	int getID() const { return id; }
+	const string& getHostAPI() const { return (const string&)hostAPI; }
 	
+	double getDefaultLowInputLatency() const { return defLowInputLat; }
+	double getDefaultLowOutputLatency() const { return defLowOutputLat; }
+	double getDefaultHighInputLatency() const { return defHighInputLat; }
+	double getDefaultHighOutputLatency() const { return defHighOutputLat; }
+	double getDefaultSampleRate() const { return defSampleRate; }
+	const vector<double>& getSupportedSampleRatesHalfDuplexInput() const { return (const vector<double>&)sampleRatesHalfDupInput; }
+	const vector<double>& getSupportedSampleRatesHalfDuplexOutput() const { return (const vector<double>&)sampleRatesHalfDupOutput; }
+	const vector<double>& getSupportedSampleRatesFullDuplex() const { return (const vector<double>&)sampleRatesFullDup; }
+	
+	int getSupportedChannelCountOutput() const { return channelCountOutput; }
+	int getSupportedChannelCountInput() const { return channelCountInput; }
+};
+
+class IDeviceFactory {
+public:
+	virtual ~IDeviceFactory() {}
+	virtual int getDeviceCount() const = 0;
+	virtual IDevice& getDevice(int index) const = 0;
+	
+	virtual IDevice& getDefaultInputDevice() const = 0;
+	virtual IDevice& getDefaultOutputDevice() const = 0;
+};
+
+class DeviceFactoryPa : public IDeviceFactory {
+	int deviceCount;
+	vector<DevicePa*> devs;
+public:
+	DeviceFactoryPa();
+	
+	int getDeviceCount() const { return deviceCount; }
+	IDevice& getDevice(int index) const { return (IDevice& )(*devs[index]); }
+	
+	IDevice& getDefaultInputDevice() const;
+	IDevice& getDefaultOutputDevice() const;
+};
+
+class TransceiverPa;
+
+class TransceiverCore : public Thread, public TimerPort {
+	TransceiverPa* t;
+	CallbackData cData;
+	RTPSession *socket;
+	
+	void openStream();
+public:
+	TransceiverCore(TransceiverPa* tpa);
+	~TransceiverCore();
+	
+	void run();
 };
 
 class ITransceiver {
-public: 
-	virtual vector<IDevice> getAvailableInputDevices() const = 0;
-	virtual vector<IDevice> getAvailableOutputDevices() const = 0;
+public:
+	virtual ~ITransceiver() {}
+	virtual vector<IDevice*> getAvailableInputDevices() const = 0;
+	virtual vector<IDevice*> getAvailableOutputDevices() const = 0;
 	virtual int setInputDevice(const IDevice& dev) = 0;
 	virtual int setOutputDevice(const IDevice& dev) = 0;
 	virtual int setCodec(int codec) = 0;
@@ -46,6 +141,38 @@ public:
 	
 	virtual int start() = 0;
 	virtual int stop() = 0;
+};
+
+class TransceiverPa : public ITransceiver {
+private:
+
+	friend class TransceiverCore;
+
+	DeviceFactoryPa* devMgr;
+	const IDevice* inputDevice;
+	const IDevice* outputDevice;
+	
+	IPV4Address localAddress;
+	int localPort;
+	IPV4Address remoteAddress;
+	int remotePort;
+	
+	PaStream* stream;
+	
+	TransceiverCore *tCore;
+public: 
+	TransceiverPa();
+	~TransceiverPa();
+	vector<IDevice*> getAvailableInputDevices() const;
+	vector<IDevice*> getAvailableOutputDevices() const;
+	int setInputDevice(const IDevice& dev);
+	int setOutputDevice(const IDevice& dev);
+	int setCodec(int codec);
+	int setLocalEndpoint(const IPV4Address& addr, int port);
+	int setRemoteEndpoint(const IPV4Address& addr, int port);
+	
+	int start();
+	int stop();
 };
 
 } /* namespace agh */

@@ -114,6 +114,17 @@ struct NegotiateResult {
 	};
 };
 
+struct TransceiverStartResult {
+	enum {
+		SUCCESS = 0,
+		LOCAL_ENDPOINT_ERROR,
+		REMOTE_ENDPOINT_ERROR,
+		STREAM_OPEN_ERROR,
+		
+		OTHER = -1
+	};
+};
+
 }
 
 #endif /* __RESTYPES_H__INCLUDED__ */
