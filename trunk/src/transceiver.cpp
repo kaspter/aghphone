@@ -225,11 +225,42 @@ int TransceiverPa::start()
 		printf("error2\n");
 		return TransceiverStartResult::REMOTE_ENDPOINT_ERROR;
 	}
-		
-	tCore = new TransceiverCore(this);
-	tCore->start();
 	
-	cout << "Transceiver core started" << endl;
+	openStream();
+	
+	tCore = new TransmitterCore(this);
+	rCore = new ReceiverCore(this);
+
+	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
+
+	socket->setSchedulingTimeout( 10000 );
+	//	  socket->setExpireTimeout(10000);
+	
+	
+	if( !socket->addDestination( IPV4Host(remoteAddress.getAddress()), remotePort ) ) {
+		/*
+		 * TODO: Implement ccrtp connection failure
+		 */
+		cout << "CCRTP destination connection failure: " << IPV4Host(remoteAddress.getAddress()) << ":" << remotePort << endl;
+		return -1;
+	}
+	
+	socket->setPayloadFormat( StaticPayloadFormat( sptPCMU ) );
+
+	socket->startRunning();
+	
+	/*
+  	if( socket->RTPDataQueue::isActive() )
+		cout << "active." << endl;
+	else
+	    cerr << "not active." << endl;
+	*/
+	
+	tCore->start();
+	cout << "Transmitter core started" << endl;
+	
+	rCore->start();
+	cout << "Receiver core started" << endl;
 	
 	return TransceiverStartResult::SUCCESS;
 }
@@ -242,49 +273,18 @@ int TransceiverPa::stop()
 	return 0;
 }
 
-TransceiverCore::TransceiverCore(TransceiverPa* tpa)
+TransmitterCore::TransmitterCore(TransceiverPa* tpa)
 {
 	t = tpa;
-	
-	cData.inputBuffer = NULL;
-	cData.outputBuffer = NULL;
 }
 
-TransceiverCore::~TransceiverCore()
+TransmitterCore::~TransmitterCore()
 {
 	terminate();
-	
-	Pa_CloseStream(t->stream);
-	Pa_Terminate();     
-	
-	if( cData.inputBuffer )
-		delete cData.inputBuffer;
-	if( cData.outputBuffer )
-		delete cData.outputBuffer;
 }
 
-void TransceiverCore::run()
-{
-	openStream();
-	
-	socket = new RTPSession( IPV4Host(t->localAddress.getAddress()), t->localPort );
-
-	socket->setSchedulingTimeout( 10000 );
-	//	  socket->setExpireTimeout(10000);
-	
-	
-	if( !socket->addDestination( IPV4Host(t->remoteAddress.getAddress()), t->remotePort ) ) {
-		/*
-		 * TODO: Implement ccrtp connection failure
-		 */
-		cout << "CCRTP destination connection failure: " << IPV4Host(t->remoteAddress.getAddress()) << ":" << t->remotePort << endl;
-		return;
-	}
-	
-	socket->setPayloadFormat( StaticPayloadFormat( sptPCMU ) );
-
-	socket->startRunning();
-	
+void TransmitterCore::run()
+{	
 	setCancel(cancelImmediate);
 
 /*
@@ -298,50 +298,69 @@ void TransceiverCore::run()
 	
 	int packetCounter = 0;
 	
-	for(int i=0;i<160;i++)
-		cData.outputBuffer[i] = 0;
-	
-	cData.outputReady = true;
-	
 	while(1) {
-  		long size;
-	  	const AppDataUnit* adu;
-	  	bool nosound;
-	  	do {
-	  		nosound = true;
-	  		if( cData.inputReady ) {
-	  			socket->putData(160*packetCounter,(const unsigned char *)cData.inputBuffer, 160);
-	  			cData.inputReady = false;
-	  			nosound = false;
-	  			printf("timestamp: %d\n", packetCounter*160); fflush(stdout);
-	  			packetCounter++; 
-	  		}
-	  		
-	  		adu = socket->getData(socket->getFirstTimestamp());
-	  		if( (NULL == adu) && nosound)
-	  			Thread::sleep(5);
-	  	} while ( (NULL == adu) || ( (size = adu->getSize()) == 0 ) );
-	    
-	    memcpy((void *)cData.outputBuffer, adu->getData(), 160);
-		cData.outputReady = true;
+	  	if( t->cData.inputReady ) {
+	  		t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  		t->cData.inputReady = false;
+	  		printf("timestamp: %d\n", packetCounter*160); fflush(stdout);
+	  		packetCounter++; 
+	  	}
 
 	    Thread::sleep(TimerPort::getTimer());
 	    TimerPort::incTimer(20);
     }
 }
 
-void TransceiverCore::openStream()
+ReceiverCore::ReceiverCore(TransceiverPa* tpa)
+{
+	t = tpa;
+}
+
+ReceiverCore::~ReceiverCore()
+{
+	terminate();
+}
+
+void ReceiverCore::run()
+{	
+	setCancel(cancelImmediate);
+		
+	TimerPort::setTimer(20);
+	
+	for(int i=0;i<160;i++)
+		t->cData.outputBuffer[i] = 0;
+	
+	t->cData.outputReady = true;
+	
+	while(1) {
+  		long size;
+	  	const AppDataUnit* adu;
+	  	do {
+	  		adu = t->socket->getData(t->socket->getFirstTimestamp());
+	  		if( NULL == adu )
+	  			Thread::sleep(5);
+	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
+	    
+	    memcpy((void *)t->cData.outputBuffer, adu->getData(), 160);
+		t->cData.outputReady = true;
+		
+	    Thread::sleep(TimerPort::getTimer());
+	    TimerPort::incTimer(20);
+    }
+}
+
+void TransceiverPa::openStream()
 {
 	PaStreamParameters inputParameters, outputParameters;
 	
-	inputParameters.device = t->inputDevice->getID(); /* default input device */
+	inputParameters.device = inputDevice->getID(); /* default input device */
   	inputParameters.channelCount = 1;                    /* stereo input */
 	inputParameters.sampleFormat = paInt8;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = NULL;
 	//cout << "input device conf" << inputParameters.device << endl;	  
     
-    outputParameters.device = t->outputDevice->getID(); /* default input device */
+    outputParameters.device = outputDevice->getID(); /* default input device */
   	outputParameters.channelCount = 1;                    /* stereo input */
 	outputParameters.sampleFormat = paInt8;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
@@ -353,7 +372,7 @@ void TransceiverCore::openStream()
 	
   	/* Record some audio. -------------------------------------------- */
   	PaError err = Pa_OpenStream(
-       &(t->stream),
+       &stream,
        &inputParameters,
        &outputParameters,
    	   8000, // sample rate
@@ -370,7 +389,7 @@ void TransceiverCore::openStream()
 		return;
 	}
 
-	err = Pa_StartStream(t->stream);
+	err = Pa_StartStream(stream);
 
 	if(err != paNoError) {
 		/*
