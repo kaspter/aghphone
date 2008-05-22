@@ -428,6 +428,7 @@ int Terminal::remoteStartTransmission(const Ice::Current& cur) {
 } /* namespace agh */
 
 int main(int argc, char *argv[]) {
+/*	
 //	try {
 		// Set up a simple configuration that logs on the console.
 		BasicConfigurator::configure();
@@ -450,7 +451,7 @@ int main(int argc, char *argv[]) {
 		// master test
 		port = 8348;
 	}
-	Terminal *app = new Terminal(port);
+	Terminal *app = new Terminal(port); 
 
 	if (argc > 1) {
 		app->connect("localhost", 8348);
@@ -462,6 +463,18 @@ int main(int argc, char *argv[]) {
 	LOG4CXX_DEBUG(logger, "Ala ma kota");
 
 	sleep(6000);
+*/
 
+	ITransceiver *itr = new TransceiverPa();
+	
+	itr->setLocalEndpoint(argv[0], atoi(argv[1]));
+	itr->setRemoteEndpoint(argv[2], atoi(argv[3]));
+	
+	itr->start();
+	
+	while(1) {
+		cout << "." << endl;
+		sleep(1000);
+	}
 }
 
