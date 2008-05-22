@@ -37,6 +37,7 @@ namespace agh {
 typedef struct {
 	char *inputBuffer;
 	char *outputBuffer;
+	bool outputReady;
 } CallbackData; 
 
 
