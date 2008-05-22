@@ -117,15 +117,22 @@ public:
 
 class TransceiverPa;
 
-class TransceiverCore : public Thread, public TimerPort {
+class TransmitterCore : public Thread, public TimerPort {
 	TransceiverPa* t;
-	CallbackData cData;
-	RTPSession *socket;
 	
-	void openStream();
 public:
-	TransceiverCore(TransceiverPa* tpa);
-	~TransceiverCore();
+	TransmitterCore(TransceiverPa* tpa);
+	~TransmitterCore();
+	
+	void run();
+};
+
+class ReceiverCore : public Thread, public TimerPort {
+	TransceiverPa* t;
+	
+public:
+	ReceiverCore(TransceiverPa* tpa);
+	~ReceiverCore();
 	
 	void run();
 };
@@ -148,7 +155,8 @@ public:
 class TransceiverPa : public ITransceiver {
 private:
 
-	friend class TransceiverCore;
+	friend class TransmitterCore;
+	friend class ReceiverCore;
 
 	DeviceFactoryPa* devMgr;
 	const IDevice* inputDevice;
@@ -160,8 +168,13 @@ private:
 	int remotePort;
 	
 	PaStream* stream;
+	CallbackData cData;
+	RTPSession *socket;
 	
-	TransceiverCore *tCore;
+	TransmitterCore *tCore;
+	ReceiverCore *rCore;
+	
+	void openStream();
 public: 
 	TransceiverPa();
 	~TransceiverPa();
