@@ -23,11 +23,43 @@
 #include "restypes.h"
 #include <portaudio.h>
 #include <ccrtp/rtp.h>
+#include <math.h>
 
 using namespace std;
 using namespace ost;
 
 namespace agh {
+
+static volatile int c_in=0;
+static volatile int c_out=0;
+
+static int callback( const void *inputBuffer, void *outputBuffer,
+                      unsigned long framesPerBuffer,
+ 	                  const PaStreamCallbackTimeInfo* timeInfo,
+                      PaStreamCallbackFlags statusFlags,
+                      void *userData )
+{
+	CallbackData *data = (CallbackData*)userData;
+
+	(void) timeInfo;
+	//memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
+	char *iptr = (char*)data->inputBuffer;
+	char *iptr2 = (char*)inputBuffer;
+	char *optr = (char*)data->outputBuffer;
+	char *optr2 = (char*)outputBuffer;
+	for( unsigned long i=0;i<framesPerBuffer;i++ ) {
+		*iptr++ =  *iptr2++;
+		*optr2++ = *optr++;
+	}
+		
+	//	data->inputReady = true;
+	 //socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  	//	t->cData.inputReady = false;
+	  		//printf("transmitter timestamp: %d\n", t->cData.packetCounter); fflush(stdout);
+	//  		packetCounter++; r
+	++c_in;
+	return paContinue;
+}
 
 static int callbackInput(  const void *inputBuffer, void *outputBuffer,
                       unsigned long framesPerBuffer,
@@ -38,10 +70,17 @@ static int callbackInput(  const void *inputBuffer, void *outputBuffer,
 	CallbackData *data = (CallbackData*)userData;
 
 	(void) timeInfo;
-
-	memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
-	data->inputReady = true;
-
+	//memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
+	char *ptr = (char*)data->inputBuffer;
+	char *iptr = (char*)inputBuffer;
+	for( unsigned long i=0;i<framesPerBuffer;i++ )
+		*ptr++ =  *iptr++;
+	//	data->inputReady = true;
+	 //socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  	//	t->cData.inputReady = false;
+	  		//printf("transmitter timestamp: %d\n", t->cData.packetCounter); fflush(stdout);
+	//  		packetCounter++; r
+	++c_in;
 	return paContinue;
 }
 
@@ -55,11 +94,15 @@ static int callbackOutput(  const void *inputBuffer, void *outputBuffer,
 
 	(void) timeInfo;
 
-	if( data->outputReady ) {
-		memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
-		data->outputReady = false;
-	}
-
+	//if( data->outputReady ) {
+		//memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
+		char *ptr = (char*)data->outputBuffer;
+		char *optr = (char*)outputBuffer;
+		for( unsigned long i=0;i<framesPerBuffer;i++ )
+			*optr++ =  *ptr++;
+		//data->outputReady = false;
+	//}
+	++c_out;
 	return paContinue;
 }
 
@@ -145,6 +188,23 @@ IDevice& DeviceFactoryPa::getDefaultOutputDevice() const
 {
 	return getDevice(Pa_GetDefaultOutputDevice());
 }
+
+class CallbackMonitor : public Thread {
+public:
+	CallbackMonitor() {}
+	~CallbackMonitor() {}
+	
+	void run()
+	{
+		while(1) {
+			Thread::sleep(1000);
+			printf("c_in: %d , c_out: %d\n", c_in, c_out);
+			c_in = 0;
+			c_out = 0;
+		}
+	}
+	
+};
 
 TransceiverPa::TransceiverPa()
 {
@@ -263,6 +323,8 @@ int TransceiverPa::start()
 
 	socket->startRunning();
 	
+	cData.socket = socket;
+	cData.packetCounter = 0;
 	/*
   	if( socket->RTPDataQueue::isActive() )
 		cout << "active." << endl;
@@ -275,6 +337,10 @@ int TransceiverPa::start()
 	
 	rCore->start();
 	cout << "Receiver core started" << endl;
+	
+	CallbackMonitor *cm = new CallbackMonitor();
+	
+	cm->start();
 	
 	return TransceiverStartResult::SUCCESS;
 }
@@ -312,16 +378,22 @@ void TransmitterCore::run()
 	
 	int packetCounter = 0;
 	
+	//t->cData.inputReady = false;
+	char inputBuf[160];
 	while(1) {
-	  	if( t->cData.inputReady ) {
-	  		t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
-	  		t->cData.inputReady = false;
-	  		//printf("transmitter timestamp: %d\n", packetCounter*160); fflush(stdout);
-	  		packetCounter++; 
-	  	}
-
-	    Thread::sleep(1);
-	    //TimerPort::incTimer(20);
+		//  	if( t->cData.inputReady ) {
+		
+			Pa_ReadStream(t->stream, inputBuf, 160); 
+	  		t->socket->putData(160*packetCounter,(const unsigned char *)inputBuf, 160);
+	  		packetCounter++;
+	  		
+	  	//	t->cData.inputReady = false;
+	  		//printf("transmitter timestamp: %d\n", t->cData.packetCounter); fflush(stdout);
+	//  		packetCounter++; 
+	//  	} else {
+	
+	    	Thread::sleep(TimerPort::getTimer());
+	    	TimerPort::incTimer(1000);
     }
 }
 
@@ -344,7 +416,12 @@ void ReceiverCore::run()
 	for(int i=0;i<160;i++)
 		t->cData.outputBuffer[i] = 0;
 	
-	t->cData.outputReady = true;
+	//t->cData.outputReady = true;
+	char sint[160];
+	for(int i=0;i<160;i++) {
+		sint[i] = (char)(sin(3.14*((float) i)/80.0)*256.0);
+		//t->cData.outputBuffer[i] = sint[i];
+	}
 	
 	while(1) {
   		long size;
@@ -355,18 +432,31 @@ void ReceiverCore::run()
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
 	    
-	    memcpy((void *)t->cData.outputBuffer, adu->getData(), 160);
-		t->cData.outputReady = true;
+	   PaError err;
+	   
+	   err = Pa_WriteStream(t->stream, adu->getData(), 160);
+	   
+	   if(err != paNoError) {
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	    
+	    //memcpy((void *)t->cData.outputBuffer, adu->getData(), 160);
+		//t->cData.outputReady = true;
 		//printf("received packet\n"); fflush(stdout);
 		
-	    Thread::sleep(TimerPort::getTimer());
-	    TimerPort::incTimer(20);
+		//for(int i=0;i<160;i++)
+			//t->cData.outputBuffer[i] = si
+		
+	    //Thread::sleep(TimerPort::getTimer());
+	    //TimerPort::incTimer(1000);
     }
 }
 
 void TransceiverPa::openStream()
 {
 	PaStreamParameters inputParameters, outputParameters;
+	PaError err;
 	
 	inputParameters.device = inputDevice->getID(); /* default input device */
   	inputParameters.channelCount = 1;                    /* stereo input */
@@ -374,16 +464,16 @@ void TransceiverPa::openStream()
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = NULL;
 	
-	PaError err = Pa_OpenStream(&streamInput, &inputParameters, NULL,
+	/*err = Pa_OpenStream(&streamInput, &inputParameters, NULL,
 								8000, 160, paClipOff, callbackInput, &cData);
-	//cout << "input device conf" << inputParameters.device << endl;	  
-    if(err != paNoError) {
+	*///cout << "input device conf" << inputParameters.device << endl;	  
+    //if(err != paNoError) {
 		/*
 		 * TODO: Implement logging of stream opening failure
 		 */
-		cout << Pa_GetErrorText(err) << endl;
-		return;
-	}
+//		cout << Pa_GetErrorText(err) << endl;
+	//	return;
+//	}
     
     outputParameters.device = outputDevice->getID(); /* default input device */
   	outputParameters.channelCount = 1;                    /* stereo input */
@@ -392,9 +482,16 @@ void TransceiverPa::openStream()
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 	//cout << "output device conf" << outputParameters.device << endl;
 	
-	err = Pa_OpenStream(&streamOutput, NULL, &outputParameters,
+	/*err = Pa_OpenStream(&streamOutput, NULL, &outputParameters,
 								8000, 160, paClipOff, callbackOutput, &cData);
+	*/
 	
+	/*err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, 8000, 160,
+						paClipOff, callback, &cData);
+	*/
+	
+	err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, 8000, 160,
+						paClipOff, NULL, NULL);
 	
 	cData.inputBuffer = new char[160];
 	cData.outputBuffer = new char[160];
@@ -417,8 +514,10 @@ void TransceiverPa::openStream()
 		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}
+	
+	err = Pa_StartStream(stream);
 
-	err = Pa_StartStream(streamInput);
+	//err = Pa_StartStream(streamInput);
 
 	if(err != paNoError) {
 		/*
@@ -428,7 +527,7 @@ void TransceiverPa::openStream()
 		return;
 	}
 	
-	err = Pa_StartStream(streamOutput);
+	//err = Pa_StartStream(streamOutput);
 
 	if(err != paNoError) {
 		/*
@@ -436,7 +535,9 @@ void TransceiverPa::openStream()
 		 */
 		cout << Pa_GetErrorText(err) << endl;
 		return;
-	}	
+	}
+	
+	cout << "Streams opened successfully" << endl;	
 } 
 
 } /* namespace agh */
