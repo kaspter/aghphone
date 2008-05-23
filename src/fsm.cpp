@@ -469,7 +469,7 @@ int main(int argc, char *argv[]) {
 	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));	
 	itr->start();
 	while(1) {
-		cout << "." << endl;
+		//cout << "." << endl;
 		sleep(1000);
 	}
 }

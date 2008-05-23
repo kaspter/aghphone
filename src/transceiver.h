@@ -39,6 +39,8 @@ typedef struct {
 	char *outputBuffer;
 	bool outputReady;
 	bool inputReady;
+	RTPSession *socket;
+	int packetCounter;
 } CallbackData; 
 
 
@@ -167,8 +169,9 @@ private:
 	IPV4Address remoteAddress;
 	int remotePort;
 	
-	PaStream* streamInput;
-	PaStream* streamOutput;
+	//PaStream* streamInput;
+	//PaStream* streamOutput;
+	PaStream* stream;
 	CallbackData cData;
 	RTPSession *socket;
 	
