@@ -29,7 +29,7 @@ using namespace ost;
 
 namespace agh {
 
-static int callback(  const void *inputBuffer, void *outputBuffer,
+static int callbackInput(  const void *inputBuffer, void *outputBuffer,
                       unsigned long framesPerBuffer,
  	                  const PaStreamCallbackTimeInfo* timeInfo,
                       PaStreamCallbackFlags statusFlags,
@@ -41,7 +41,20 @@ static int callback(  const void *inputBuffer, void *outputBuffer,
 
 	memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
 	data->inputReady = true;
-	
+
+	return paContinue;
+}
+
+static int callbackOutput(  const void *inputBuffer, void *outputBuffer,
+                      unsigned long framesPerBuffer,
+ 	                  const PaStreamCallbackTimeInfo* timeInfo,
+                      PaStreamCallbackFlags statusFlags,
+                      void *userData )
+{
+	CallbackData *data = (CallbackData*)userData;
+
+	(void) timeInfo;
+
 	if( data->outputReady ) {
 		memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
 		data->outputReady = false;
@@ -49,6 +62,7 @@ static int callback(  const void *inputBuffer, void *outputBuffer,
 
 	return paContinue;
 }
+
 /*
  *  PortAudio have to be initialized before running this c'tor
  */
@@ -359,7 +373,17 @@ void TransceiverPa::openStream()
 	inputParameters.sampleFormat = paInt8;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = NULL;
+	
+	PaError err = Pa_OpenStream(&streamInput, &inputParameters, NULL,
+								8000, 160, paClipOff, callbackInput, &cData);
 	//cout << "input device conf" << inputParameters.device << endl;	  
+    if(err != paNoError) {
+		/*
+		 * TODO: Implement logging of stream opening failure
+		 */
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
     
     outputParameters.device = outputDevice->getID(); /* default input device */
   	outputParameters.channelCount = 1;                    /* stereo input */
@@ -368,20 +392,24 @@ void TransceiverPa::openStream()
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 	//cout << "output device conf" << outputParameters.device << endl;
 	
+	err = Pa_OpenStream(&streamOutput, NULL, &outputParameters,
+								8000, 160, paClipOff, callbackOutput, &cData);
+	
+	
 	cData.inputBuffer = new char[160];
 	cData.outputBuffer = new char[160];
 	
   	/* Record some audio. -------------------------------------------- */
-  	PaError err = Pa_OpenStream(
+  	/*PaError err = Pa_OpenStream(
        &stream,
        &inputParameters,
        &outputParameters,
    	   8000, // sample rate
    	   160, // framesPerBuffer
-   	   paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+   	   paClipOff,  
        callback,
        &cData );
-
+*/
 	if(err != paNoError) {
 		/*
 		 * TODO: Implement logging of stream opening failure
@@ -390,7 +418,17 @@ void TransceiverPa::openStream()
 		return;
 	}
 
-	err = Pa_StartStream(stream);
+	err = Pa_StartStream(streamInput);
+
+	if(err != paNoError) {
+		/*
+		 * TODO: Implement logging of stream starting failure
+		 */
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	
+	err = Pa_StartStream(streamOutput);
 
 	if(err != paNoError) {
 		/*
