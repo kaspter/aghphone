@@ -46,8 +46,8 @@ static int callback( const void *inputBuffer, void *outputBuffer,
 	(void) timeInfo;
 	
 	if(data->outputReady) {
-	char *optr = (char*)data->outputBuffer;
-	char *optr2 = (char*)outputBuffer;
+	sampleType *optr = (sampleType*)data->outputBuffer;
+	sampleType *optr2 = (sampleType*)outputBuffer;
 	for( unsigned long i=0;i<framesPerBuffer;i++ ) {
 		*optr2++ = *optr++;
 	}
@@ -56,8 +56,8 @@ static int callback( const void *inputBuffer, void *outputBuffer,
 	}
 	
 	//if(!data->inputReady) {
-	char *iptr = (char*)data->inputBuffer;
-	char *iptr2 = (char*)inputBuffer;
+	sampleType *iptr = (sampleType*)data->inputBuffer;
+	sampleType *iptr2 = (sampleType*)inputBuffer;
 	for( unsigned long i=0;i<framesPerBuffer;i++ ) {
 		*iptr++ =  *iptr2++;
 	}
@@ -77,8 +77,8 @@ static int callbackInput(  const void *inputBuffer, void *outputBuffer,
 
 	(void) timeInfo;
 
-	char *ptr = (char*)data->inputBuffer;
-	char *iptr = (char*)inputBuffer;
+	sampleType *ptr = (sampleType*)data->inputBuffer;
+	sampleType *iptr = (sampleType*)inputBuffer;
 	for( unsigned long i=0;i<framesPerBuffer;i++ )
 		*ptr++ =  *iptr++;
 		
@@ -96,14 +96,14 @@ static int callbackOutput(  const void *inputBuffer, void *outputBuffer,
 
 	(void) timeInfo;
 
-	char *optr = (char*)outputBuffer;
+	sampleType *optr = (sampleType*)outputBuffer;
 	if(data->ringBufferReadIndex == data->ringBufferWriteIndex) {
 		for(unsigned int i=0;i<framesPerBuffer;i++) {
 			*optr++ = 0;
 		}
 		underflowCount++;
 	} else {
-		char *ptr = (char*)data->ringBuffer + data->ringBufferReadIndex;
+		sampleType *ptr = (sampleType*)data->ringBuffer + data->ringBufferReadIndex;
 		unsigned int toEnd = data->ringBufferEnd - optr;
 		
 		if(toEnd >= framesPerBuffer ) {
@@ -156,13 +156,13 @@ DevicePa::DevicePa(int index)
 	/* poll for standard sample rates */
 	inputParameters.device = index;
     inputParameters.channelCount = deviceInfo->maxInputChannels;
-    inputParameters.sampleFormat = paInt16;
+    inputParameters.sampleFormat = SAMPLE_TYPE;
     inputParameters.suggestedLatency = 0; /* ignored by Pa_IsFormatSupported() */
     inputParameters.hostApiSpecificStreamInfo = NULL;
     
     outputParameters.device = index;
     outputParameters.channelCount = deviceInfo->maxOutputChannels;
-    outputParameters.sampleFormat = paInt16;
+    outputParameters.sampleFormat = SAMPLE_TYPE;
     outputParameters.suggestedLatency = 0; /* ignored by Pa_IsFormatSupported() */
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
@@ -243,6 +243,7 @@ TransceiverPa::TransceiverPa()
 		
 		localPort = -1;
 		remotePort = -1;
+		framesPerBuffer = 160;
 		
 		tCore = NULL;
 		cout << "Transceiver created successfuly" << endl;
@@ -427,7 +428,7 @@ void TransmitterCore::run()
 	int packetCounter = 0;
 	
 	while(1) {
-	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  		t->socket->sendImmediate(t->framesPerBuffer*sizeof(sampleType)*packetCounter,(const unsigned char *)t->cData.inputBuffer, t->framesPerBuffer*sizeof(sampleType));
 	  		packetCounter++;
 	  		
 	  		TimerPort::incTimer(20);
@@ -454,10 +455,10 @@ void ReceiverCore::run()
 //	for(int i=0; i<160; i++)
 //		t->cData.outputBuffer[i] = 0;
 
-	char tmpBuffer[2097152]; // 2MB buffer
+	sampleType tmpBuffer[2097152]; // 4MB buffer
 	int tmpWrite=0;
-	int tmpToWrite=7500;
-	char *tmpPtr=tmpBuffer;
+	int tmpToWrite=3000;
+	sampleType *tmpPtr=tmpBuffer;
 	int tmpCtr=0;
 	while(1) {
 		
@@ -469,24 +470,26 @@ void ReceiverCore::run()
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
 	    
-	   	char *ptr = (char*)adu->getData();
+	   	sampleType *ptr = (sampleType*)adu->getData();
 	   	
 	   	if(tmpWrite < tmpToWrite) {
-	   		memcpy(tmpPtr, ptr, 160);
-	   		tmpPtr+=160;
+	   		memcpy(tmpPtr, ptr, t->framesPerBuffer*sizeof(sampleType));
+	   		tmpPtr+=t->framesPerBuffer*sizeof(sampleType);
 	   		tmpWrite++;
-	   		printf("buffering... %d/%d\n", tmpWrite, tmpToWrite); fflush(stdout);
+	   		if(! (tmpWrite % 50) ) {
+	   			printf("buffering... %d/%d\n", tmpWrite, tmpToWrite); fflush(stdout);
+	   		}
 	   	} else {
 	   		char fname[10];
 	   		sprintf(fname, "dump%d", tmpCtr++);
 	   		printf("dumping to file %s ...\n", fname);  fflush(stdout);
 	   		FILE *fout = fopen(fname, "wb");
-	   		fwrite(tmpBuffer, sizeof(char), tmpWrite*160, fout);
+	   		fwrite(tmpBuffer, sizeof(sampleType), tmpWrite*t->framesPerBuffer, fout);
 	   		fclose(fout);
 	   		tmpWrite=0;
 	   	}
 	   	
-	   	char *optr = t->cData.ringBuffer + t->cData.ringBufferWriteIndex;
+	   	sampleType *optr = t->cData.ringBuffer + t->cData.ringBufferWriteIndex;
 	   	
 	   	int toEnd = t->cData.ringBufferEnd - optr;
 	   	if(toEnd >= 160 ) {
@@ -558,8 +561,8 @@ void TransceiverPa::openStream()
 	
 
 
-	cData.inputBuffer = new char[160];
-	cData.outputBuffer = new char[160];
+	cData.inputBuffer = new sampleType[framesPerBuffer];
+	cData.outputBuffer = new sampleType[framesPerBuffer];
 	cData.outputReady = false;
 	cData.inputReady = false;
 	
