@@ -425,7 +425,8 @@ void TransmitterCore::run()
 			//}
 		//	while( !t->cData.inputBuffer)
 			//	Thread::sleep(5);
-	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  		//t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  		t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);	  		
 	  		//t->cData.inputBuffer = false;
 	  		packetCounter++;
 	  		//c_in++;
