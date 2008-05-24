@@ -169,9 +169,9 @@ private:
 	IPV4Address remoteAddress;
 	int remotePort;
 	
-	//PaStream* streamInput;
-	//PaStream* streamOutput;
-	PaStream* stream;
+	PaStream* inputStream;
+	PaStream* outputStream;
+	//PaStream* stream;
 	CallbackData cData;
 	RTPSession *socket;
 	

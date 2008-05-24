@@ -243,7 +243,9 @@ TransceiverPa::~TransceiverPa()
 	delete socket;
 	cout << "RTP session closed" << endl;
 		
-	Pa_CloseStream(stream);
+	//Pa_CloseStream(stream);
+	Pa_CloseStream(inputStream);
+	Pa_CloseStream(outputStream);
 	cout << "audio stream closed" << endl;
 	
 	Pa_Terminate();
@@ -322,8 +324,8 @@ int TransceiverPa::start()
 
 	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
 
-	socket->setSchedulingTimeout( 10000 );
-	//	  socket->setExpireTimeout(10000);
+	socket->setSchedulingTimeout(10000);
+	 //socket->setExpireTimeout(30);
 	
 	
 	if( !socket->addDestination( IPV4Host(remoteAddress.getAddress()), remotePort ) ) {
@@ -387,13 +389,24 @@ void TransmitterCore::run()
 	
 	int packetCounter = 0;
 	
-	char inputBuf[160];
+	char inputBuf[1024];
 	while(1) {
-			Pa_ReadStream(t->stream, inputBuf, 160);
-			 
-	  		t->socket->putData(160*packetCounter,(const unsigned char *)inputBuf, 160);
+	  		Thread::sleep(TimerPort::getTimer());
+			//Pa_ReadStream(t->stream, inputBuf, 160);
+			
+			PaError err;
+			
+			err = Pa_ReadStream(t->inputStream, inputBuf, 160);
+			
+			if(err != paNoError) {
+				cout << "ReadStream error: " << Pa_GetErrorText(err) << endl;
+				return;
+			}
+			
+	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)inputBuf, 160);
 	  		packetCounter++;
 	  		c_in++;
+	  		TimerPort::incTimer(20);
     }
 }
 
@@ -414,19 +427,26 @@ void ReceiverCore::run()
 	TimerPort::setTimer(20);
 	
 	while(1) {
-  		//long size;
-	  	//const AppDataUnit* adu;
-	  	/*do {
+  		long size;
+	  	const AppDataUnit* adu;
+	  	do {
 	  		adu = t->socket->getData(t->socket->getFirstTimestamp());
 	  		if( NULL == adu )
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
-	    */
-	   //PaError err;
-	   
-	   //err = Pa_WriteStream(t->stream, adu->getData(), 160);
+	    
+	   	PaError err;
+	   	
+	   	//err = Pa_WriteStream(t->stream, adu->getData(), 160);
+	   	err = Pa_WriteStream(t->outputStream, adu->getData(), 160);
 		
-		Thread::sleep(20);
+		if(err != paNoError) {
+			cout << "WriteStream error: " << Pa_GetErrorText(err) << endl;
+			return;
+		}
+		
+		//Thread::sleep(TimerPort::getTimer());
+		//TimerPort::incTimer(20);
 	    c_out++;
     }
 }
@@ -448,6 +468,9 @@ void TransceiverPa::openStream()
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 	
+	/* SINGLE STREAM */
+	
+	/*
 	err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, 8000, 160,
 						paClipOff, NULL, NULL);
 	
@@ -455,18 +478,57 @@ void TransceiverPa::openStream()
 		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}
+	*/
 	
-	cData.inputBuffer = new char[160];
-	cData.outputBuffer = new char[160];
+	/* TWO STREAMS */
 	
-	err = Pa_StartStream(stream);
-
+	err = Pa_OpenStream(&inputStream, &inputParameters, NULL, 8000, 160,
+						paClipOff, NULL, NULL);
+	
 	if(err != paNoError) {
 		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}
+	
+	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 8000, 160,
+						paClipOff, NULL, NULL);
+	
+	if(err != paNoError) {
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	
+	
+	
+	
+	cData.inputBuffer = new char[160];
+	cData.outputBuffer = new char[160];
+	
+	/*  // SINGLE STREAM  
+	
+	err = Pa_StartStream(stream);
+	
+	if(err != paNoError) {
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	*/
 
-	cout << "Streams opened successfully" << endl;	
+	// TWO STREAMS
+	
+	err = Pa_StartStream(inputStream);
+	if(err != paNoError) {
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	err = Pa_StartStream(outputStream);
+	if(err != paNoError) {
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	
+
+	cout << "Stream(s) opened successfully" << endl;	
 } 
 
 } /* namespace agh */
