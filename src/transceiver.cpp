@@ -522,6 +522,10 @@ void TransceiverPa::openStream()
 	PaStreamParameters inputParameters, outputParameters;
 	PaError err;
 	
+	bzero(&inputParameters, sizeof(PaStreamParameters));
+	bzero(&outputParameters, sizeof(PaStreamParameters));
+	
+	
 	inputParameters.device = inputDevice->getID(); /* default input device */
   	inputParameters.channelCount = 1;                    /* stereo input */
 	inputParameters.sampleFormat = SAMPLE_TYPE;
