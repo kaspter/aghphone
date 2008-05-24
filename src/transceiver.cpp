@@ -475,10 +475,11 @@ void ReceiverCore::run()
 	   		memcpy(tmpPtr, ptr, 160);
 	   		tmpPtr+=160;
 	   		tmpWrite++;
+	   		printf("buffering... %d/%d\n", tmpWrite, tmpToWrite); fflush(stdout);
 	   	} else {
 	   		char fname[10];
 	   		sprintf(fname, "dump%d", tmpCtr++);
-	   		printf("dumping to file %s ...\n", fname);  
+	   		printf("dumping to file %s ...\n", fname);  fflush(stdout);
 	   		FILE *fout = fopen(fname, "wb");
 	   		fwrite(tmpBuffer, sizeof(char), tmpWrite*160, fout);
 	   		fclose(fout);
