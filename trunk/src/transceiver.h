@@ -32,7 +32,7 @@
 using namespace std;
 using namespace ost;
 
-#define RING_BUFFER_SIZE	4096
+#define RING_BUFFER_SIZE	512
 
 namespace agh {
 
