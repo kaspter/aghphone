@@ -32,19 +32,22 @@
 using namespace std;
 using namespace ost;
 
-namespace agh {
-
 #define RING_BUFFER_SIZE	4096
 
+namespace agh {
+
+#define SAMPLE_TYPE	paInt16
+typedef int16_t sampleType;
+
 typedef struct {
-	char *inputBuffer;
-	char *outputBuffer;
+	sampleType *inputBuffer;
+	sampleType *outputBuffer;
 	bool outputReady;
 	bool inputReady;
 	RTPSession *socket;
 	int packetCounter;
-	char ringBuffer[RING_BUFFER_SIZE];
-	char *ringBufferEnd;
+	sampleType ringBuffer[RING_BUFFER_SIZE];
+	sampleType *ringBufferEnd;
 	int ringBufferWriteIndex;
 	int ringBufferReadIndex;
 	
@@ -184,6 +187,8 @@ private:
 	
 	TransmitterCore *tCore;
 	ReceiverCore *rCore;
+	
+	int framesPerBuffer;
 	
 	void openStream();
 public: 
