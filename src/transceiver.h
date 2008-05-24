@@ -186,6 +186,8 @@ public:
 	vector<IDevice*> getAvailableOutputDevices() const;
 	int setInputDevice(const IDevice& dev);
 	int setOutputDevice(const IDevice& dev);
+	int setInputDevice(const int id);
+	int setOutputDevice(const int id);
 	int setCodec(int codec);
 	int setLocalEndpoint(const IPV4Address& addr, int port);
 	int setRemoteEndpoint(const IPV4Address& addr, int port);
