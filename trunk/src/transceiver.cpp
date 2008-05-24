@@ -346,8 +346,8 @@ int TransceiverPa::start()
 
 	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
 
-	socket->setSchedulingTimeout(10000);
-	 //socket->setExpireTimeout(30);
+	//socket->setSchedulingTimeout(10000);
+	socket->setExpireTimeout(50);
 	
 	
 	if( !socket->addDestination( IPV4Host(remoteAddress.getAddress()), remotePort ) ) {
@@ -425,8 +425,8 @@ void TransmitterCore::run()
 			//}
 		//	while( !t->cData.inputBuffer)
 			//	Thread::sleep(5);
-	  		//t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
-	  		t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);	  		
+	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  		//t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);	  		
 	  		//t->cData.inputBuffer = false;
 	  		packetCounter++;
 	  		//c_in++;
