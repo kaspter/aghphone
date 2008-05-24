@@ -75,17 +75,12 @@ static int callbackInput(  const void *inputBuffer, void *outputBuffer,
 
 	(void) timeInfo;
 
-	//if(!data->inputReady && (inputBuffer != NULL)) {
 	char *ptr = (char*)data->inputBuffer;
 	char *iptr = (char*)inputBuffer;
 	for( unsigned long i=0;i<framesPerBuffer;i++ )
-		data->inputBuffer[i] = ((char*)inputBuffer)[i];
-		//*ptr++ =  *iptr++;
+		*ptr++ =  *iptr++;
 		
-	//data->inputReady = true;
-	
 	++c_in;
-	//}
 	return paContinue;
 }
 
@@ -99,15 +94,27 @@ static int callbackOutput(  const void *inputBuffer, void *outputBuffer,
 
 	(void) timeInfo;
 
-	//if( data->outputReady ) {
-
-		char *ptr = (char*)data->outputBuffer;
-		char *optr = (char*)outputBuffer;
-		for( unsigned long i=0;i<framesPerBuffer;i++ )
-			*optr++ =  *ptr++;
-		//data->outputReady = false;
-		++c_out;
-	//}
+	char *ptr = (char*)data->ringBuffer + data->ringBufferReadIndex;
+	char *optr = (char*)outputBuffer;
+	
+	unsigned int toEnd = data->ringBufferEnd - optr;
+	
+	if(toEnd >= framesPerBuffer ) {
+		for(unsigned int i=0;i<framesPerBuffer;i++)
+	   		*optr++ = *ptr++;
+	} else {
+	   	for(unsigned int i=0;i<toEnd;i++)
+	   		*optr++ = *ptr++;
+	   	ptr = data->ringBuffer;
+	   	for(unsigned int i=0;i<framesPerBuffer-toEnd;i++)
+	   		*optr++ = *ptr++;
+	}
+	   	
+	data->ringBufferReadIndex += framesPerBuffer;
+	if(data->ringBufferReadIndex >= RING_BUFFER_SIZE)
+		data->ringBufferReadIndex -= RING_BUFFER_SIZE;
+	
+	++c_out;
 	return paContinue;
 }
 
@@ -411,25 +418,10 @@ void TransmitterCore::run()
 	
 	int packetCounter = 0;
 	
-	char inputBuf[1024];
 	while(1) {
-			//PaError err;
-			
-			//Pa_ReadStream(t->stream, inputBuf, 160);
-			//err = Pa_ReadStream(t->inputStream, inputBuf, 160);
-			
-			
-			//if(err != paNoError) {
-			//	cout << "ReadStream error: " << Pa_GetErrorText(err) << endl;
-			//	return;
-			//}
-		//	while( !t->cData.inputBuffer)
-			//	Thread::sleep(5);
 	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
-	  		//t->socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);	  		
-	  		//t->cData.inputBuffer = false;
 	  		packetCounter++;
-	  		//c_in++;
+	  		
 	  		TimerPort::incTimer(20);
 	  		Thread::sleep(TimerPort::getTimer());
     }
@@ -451,8 +443,8 @@ void ReceiverCore::run()
 		
 	TimerPort::setTimer(20);
 	
-	for(int i=0; i<160; i++)
-		t->cData.outputBuffer[i] = 0;
+//	for(int i=0; i<160; i++)
+//		t->cData.outputBuffer[i] = 0;
 	
 	while(1) {
 		
@@ -464,31 +456,24 @@ void ReceiverCore::run()
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
 	    
-	   	//PaError err;
-	   	//while(t->cData.outputBuffer)
-	   	//	Thread::sleep(5);
-	   	
-	   	//memcpy(t->cData.outputBuffer, (void*)adu->getData(), 160);
 	   	char *ptr = (char*)adu->getData();
-	   	for(int i=0;i<160;i++) {
-	   		t->cData.outputBuffer[i] = ptr[i];
+	   	char *optr = t->cData.ringBuffer + t->cData.ringBufferWriteIndex;
+	   	
+	   	int toEnd = t->cData.ringBufferEnd - optr;
+	   	if(toEnd >= 160 ) {
+	   		for(int i=0;i<160;i++)
+	   			*optr++ = *ptr++;
+	   	} else {
+	   		for(int i=0;i<toEnd;i++)
+	   			*optr++ = *ptr++;
+	   		optr = t->cData.ringBuffer;
+	   		for(int i=0;i<160-toEnd;i++)
+	   			*optr++ = *ptr++;
 	   	}
-	   	//t->cData.outputReady = true;
 	   	
-	   	//while( t->cData.outputReady )
-	   	//	Thread::sleep(5);
-	   	
-	   	//err = Pa_WriteStream(t->stream, adu->getData(), 160);
-	   	//err = Pa_WriteStream(t->outputStream, adu->getData(), 160);
-		
-		/*if(err != paNoError) {
-			cout << "WriteStream error: " << Pa_GetErrorText(err) << endl;
-			return;
-		}*/
-		
-		//Thread::sleep(TimerPort::getTimer());
-		//TimerPort::incTimer(20);
-	    //c_out++;
+	   	t->cData.ringBufferWriteIndex += 160;
+	   	if(t->cData.ringBufferWriteIndex >= RING_BUFFER_SIZE)
+	   		t->cData.ringBufferWriteIndex -= RING_BUFFER_SIZE;
     }
 }
 
@@ -546,6 +531,13 @@ void TransceiverPa::openStream()
 	cData.outputBuffer = new char[160];
 	cData.outputReady = false;
 	cData.inputReady = false;
+	
+	for( int i=0; i<RING_BUFFER_SIZE; i++ )
+		cData.ringBuffer[i] = 0;
+	
+	cData.ringBufferWriteIndex = 0;
+	cData.ringBufferReadIndex = 0;
+	cData.ringBufferEnd = cData.ringBuffer+RING_BUFFER_SIZE;
 	
 	  // SINGLE STREAM  
 	

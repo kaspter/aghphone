@@ -34,6 +34,8 @@ using namespace ost;
 
 namespace agh {
 
+#define RING_BUFFER_SIZE	4096
+
 typedef struct {
 	char *inputBuffer;
 	char *outputBuffer;
@@ -41,6 +43,11 @@ typedef struct {
 	bool inputReady;
 	RTPSession *socket;
 	int packetCounter;
+	char ringBuffer[RING_BUFFER_SIZE];
+	char *ringBufferEnd;
+	int ringBufferWriteIndex;
+	int ringBufferReadIndex;
+	
 } CallbackData; 
 
 
