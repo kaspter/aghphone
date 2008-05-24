@@ -197,6 +197,8 @@ DeviceFactoryPa::DeviceFactoryPa()
 	
 	for(int i=0; i<deviceCount; i++)
 		devs.push_back( new DevicePa(i) );
+	
+	cout << "Found " << deviceCount << " supported audio devices." << endl;
 }
 
 IDevice& DeviceFactoryPa::getDefaultInputDevice() const
@@ -547,7 +549,7 @@ void TransceiverPa::openStream()
 	
 	 // TWO STREAMS
 	
-	err = Pa_OpenStream(&inputStream, &inputParameters, NULL, 8000, 160,
+	err = Pa_OpenStream(&inputStream, &inputParameters, NULL, 8000.0, framesPerBuffer,
 						paClipOff, callbackInput, &cData);
 	
 	if(err != paNoError) {
@@ -555,7 +557,7 @@ void TransceiverPa::openStream()
 		return;
 	}
 	
-	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 8000, 160,
+	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 8000.0, framesPerBuffer,
 						paClipOff, callbackOutput, &cData);
 	
 	if(err != paNoError) {

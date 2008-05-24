@@ -37,7 +37,7 @@ using namespace ost;
 namespace agh {
 
 #define SAMPLE_TYPE	paInt16
-typedef int16_t sampleType;
+typedef short sampleType;
 
 typedef struct {
 	sampleType *inputBuffer;
