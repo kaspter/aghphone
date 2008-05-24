@@ -156,13 +156,13 @@ DevicePa::DevicePa(int index)
 	/* poll for standard sample rates */
 	inputParameters.device = index;
     inputParameters.channelCount = deviceInfo->maxInputChannels;
-    inputParameters.sampleFormat = SAMPLE_TYPE;
+    inputParameters.sampleFormat = paInt16;
     inputParameters.suggestedLatency = 0; /* ignored by Pa_IsFormatSupported() */
     inputParameters.hostApiSpecificStreamInfo = NULL;
     
     outputParameters.device = index;
     outputParameters.channelCount = deviceInfo->maxOutputChannels;
-    outputParameters.sampleFormat = SAMPLE_TYPE;
+    outputParameters.sampleFormat = paInt16;
     outputParameters.suggestedLatency = 0; /* ignored by Pa_IsFormatSupported() */
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
@@ -355,9 +355,13 @@ int TransceiverPa::start()
 		return TransceiverStartResult::REMOTE_ENDPOINT_ERROR;
 	}
 	
+	cout << "Opening streams" << endl;
 	openStream();
 	
+	cout << "Creating Transmitter core" << endl;
 	tCore = new TransmitterCore(this);
+	
+	cout << "Creating Receiver core" << endl;
 	rCore = new ReceiverCore(this);
 
 	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
@@ -518,13 +522,13 @@ void TransceiverPa::openStream()
 	
 	inputParameters.device = inputDevice->getID(); /* default input device */
   	inputParameters.channelCount = 1;                    /* stereo input */
-	inputParameters.sampleFormat = paInt8;
+	inputParameters.sampleFormat = SAMPLE_TYPE;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = NULL;
     
     outputParameters.device = outputDevice->getID(); /* default input device */
   	outputParameters.channelCount = 1;                    /* stereo input */
-	outputParameters.sampleFormat = paInt8;
+	outputParameters.sampleFormat = SAMPLE_TYPE;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 	
