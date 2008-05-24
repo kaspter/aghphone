@@ -231,8 +231,23 @@ TransceiverPa::TransceiverPa()
 
 TransceiverPa::~TransceiverPa()
 {
-	if( devMgr)
+	if( devMgr )
 		delete devMgr;
+	
+	if( tCore )
+		delete tCore;
+	
+	if( rCore )
+		delete rCore;
+	
+	delete socket;
+	cout << "RTP session closed" << endl;
+		
+	Pa_CloseStream(stream);
+	cout << "audio stream closed" << endl;
+	
+	Pa_Terminate();
+	cout << "portaudio terminated" << endl;
 }
 
 vector<IDevice*> TransceiverPa::getAvailableInputDevices() const
@@ -325,12 +340,6 @@ int TransceiverPa::start()
 	
 	cData.socket = socket;
 	cData.packetCounter = 0;
-	/*
-  	if( socket->RTPDataQueue::isActive() )
-		cout << "active." << endl;
-	else
-	    cerr << "not active." << endl;
-	*/
 	
 	tCore->start();
 	cout << "Transmitter core started" << endl;
@@ -367,33 +376,24 @@ void TransmitterCore::run()
 {	
 	setCancel(cancelImmediate);
 
-/*
-  	if( socket->RTPDataQueue::isActive() )
+
+  	if( t->socket->RTPDataQueue::isActive() )
 		cout << "active." << endl;
 	else
 	    cerr << "not active." << endl;
-*/
+
 	
 	TimerPort::setTimer(20);
 	
 	int packetCounter = 0;
 	
-	//t->cData.inputReady = false;
 	char inputBuf[160];
 	while(1) {
-		//  	if( t->cData.inputReady ) {
-		
-			Pa_ReadStream(t->stream, inputBuf, 160); 
+			Pa_ReadStream(t->stream, inputBuf, 160);
+			 
 	  		t->socket->putData(160*packetCounter,(const unsigned char *)inputBuf, 160);
 	  		packetCounter++;
-	  		
-	  	//	t->cData.inputReady = false;
-	  		//printf("transmitter timestamp: %d\n", t->cData.packetCounter); fflush(stdout);
-	//  		packetCounter++; 
-	//  	} else {
-	
-	    	Thread::sleep(TimerPort::getTimer());
-	    	TimerPort::incTimer(1000);
+	  		c_in++;
     }
 }
 
@@ -413,43 +413,21 @@ void ReceiverCore::run()
 		
 	TimerPort::setTimer(20);
 	
-	for(int i=0;i<160;i++)
-		t->cData.outputBuffer[i] = 0;
-	
-	//t->cData.outputReady = true;
-	char sint[160];
-	for(int i=0;i<160;i++) {
-		sint[i] = (char)(sin(3.14*((float) i)/80.0)*256.0);
-		//t->cData.outputBuffer[i] = sint[i];
-	}
-	
 	while(1) {
-  		long size;
-	  	const AppDataUnit* adu;
-	  	do {
+  		//long size;
+	  	//const AppDataUnit* adu;
+	  	/*do {
 	  		adu = t->socket->getData(t->socket->getFirstTimestamp());
 	  		if( NULL == adu )
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
-	    
-	   PaError err;
+	    */
+	   //PaError err;
 	   
-	   err = Pa_WriteStream(t->stream, adu->getData(), 160);
-	   
-	   if(err != paNoError) {
-		cout << Pa_GetErrorText(err) << endl;
-		return;
-	}
-	    
-	    //memcpy((void *)t->cData.outputBuffer, adu->getData(), 160);
-		//t->cData.outputReady = true;
-		//printf("received packet\n"); fflush(stdout);
+	   //err = Pa_WriteStream(t->stream, adu->getData(), 160);
 		
-		//for(int i=0;i<160;i++)
-			//t->cData.outputBuffer[i] = si
-		
-	    //Thread::sleep(TimerPort::getTimer());
-	    //TimerPort::incTimer(1000);
+		Thread::sleep(20);
+	    c_out++;
     }
 }
 
@@ -463,80 +441,31 @@ void TransceiverPa::openStream()
 	inputParameters.sampleFormat = paInt8;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = NULL;
-	
-	/*err = Pa_OpenStream(&streamInput, &inputParameters, NULL,
-								8000, 160, paClipOff, callbackInput, &cData);
-	*///cout << "input device conf" << inputParameters.device << endl;	  
-    //if(err != paNoError) {
-		/*
-		 * TODO: Implement logging of stream opening failure
-		 */
-//		cout << Pa_GetErrorText(err) << endl;
-	//	return;
-//	}
     
     outputParameters.device = outputDevice->getID(); /* default input device */
   	outputParameters.channelCount = 1;                    /* stereo input */
 	outputParameters.sampleFormat = paInt8;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = NULL;
-	//cout << "output device conf" << outputParameters.device << endl;
-	
-	/*err = Pa_OpenStream(&streamOutput, NULL, &outputParameters,
-								8000, 160, paClipOff, callbackOutput, &cData);
-	*/
-	
-	/*err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, 8000, 160,
-						paClipOff, callback, &cData);
-	*/
 	
 	err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, 8000, 160,
 						paClipOff, NULL, NULL);
 	
+	if(err != paNoError) {
+		cout << Pa_GetErrorText(err) << endl;
+		return;
+	}
+	
 	cData.inputBuffer = new char[160];
 	cData.outputBuffer = new char[160];
 	
-  	/* Record some audio. -------------------------------------------- */
-  	/*PaError err = Pa_OpenStream(
-       &stream,
-       &inputParameters,
-       &outputParameters,
-   	   8000, // sample rate
-   	   160, // framesPerBuffer
-   	   paClipOff,  
-       callback,
-       &cData );
-*/
-	if(err != paNoError) {
-		/*
-		 * TODO: Implement logging of stream opening failure
-		 */
-		cout << Pa_GetErrorText(err) << endl;
-		return;
-	}
-	
 	err = Pa_StartStream(stream);
 
-	//err = Pa_StartStream(streamInput);
-
 	if(err != paNoError) {
-		/*
-		 * TODO: Implement logging of stream starting failure
-		 */
 		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}
-	
-	//err = Pa_StartStream(streamOutput);
 
-	if(err != paNoError) {
-		/*
-		 * TODO: Implement logging of stream starting failure
-		 */
-		cout << Pa_GetErrorText(err) << endl;
-		return;
-	}
-	
 	cout << "Streams opened successfully" << endl;	
 } 
 
