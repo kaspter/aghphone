@@ -511,6 +511,7 @@ void ReceiverCore::run()
 	   	
 	   	
 	   	
+	   	
 	   	t->cData.ringBufferWriteIndex += 160;
 	   	if(t->cData.ringBufferWriteIndex >= RING_BUFFER_SIZE)
 	   		t->cData.ringBufferWriteIndex -= RING_BUFFER_SIZE;
