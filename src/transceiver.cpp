@@ -236,6 +236,12 @@ TransceiverPa::TransceiverPa()
 
 TransceiverPa::~TransceiverPa()
 {
+	Pa_AbortStream(inputStream);
+	Pa_AbortStream(outputStream);
+	Pa_CloseStream(inputStream);
+	Pa_CloseStream(outputStream);
+	cout << "audio stream closed" << endl;
+	
 	if( devMgr )
 		delete devMgr;
 	
@@ -249,9 +255,6 @@ TransceiverPa::~TransceiverPa()
 	cout << "RTP session closed" << endl;
 		
 	//Pa_CloseStream(stream);
-	Pa_CloseStream(inputStream);
-	Pa_CloseStream(outputStream);
-	cout << "audio stream closed" << endl;
 	
 	Pa_Terminate();
 	cout << "portaudio terminated" << endl;
@@ -278,9 +281,23 @@ int TransceiverPa::setInputDevice(const IDevice& dev)
 	return 0;
 }
 
+int TransceiverPa::setInputDevice(const int id)
+{
+	inputDevice = &devMgr->getDevice(id);
+	
+	return 0;
+}
+
 int TransceiverPa::setOutputDevice(const IDevice& dev)
 {
 	outputDevice = &dev;
+	
+	return 0;
+}
+
+int TransceiverPa::setOutputDevice(const int id)
+{
+	outputDevice = &devMgr->getDevice(id);
 	
 	return 0;
 }
@@ -450,7 +467,11 @@ void ReceiverCore::run()
 	   	//while(t->cData.outputBuffer)
 	   	//	Thread::sleep(5);
 	   	
-	   	memcpy(t->cData.outputBuffer, (void*)adu->getData(), 160);
+	   	//memcpy(t->cData.outputBuffer, (void*)adu->getData(), 160);
+	   	char *ptr = (char*)adu->getData();
+	   	for(int i=0;i<160;i++) {
+	   		t->cData.outputBuffer[i] = ptr[i];
+	   	}
 	   	//t->cData.outputReady = true;
 	   	
 	   	//while( t->cData.outputReady )
