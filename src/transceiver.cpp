@@ -42,22 +42,26 @@ static int callback( const void *inputBuffer, void *outputBuffer,
 	CallbackData *data = (CallbackData*)userData;
 
 	(void) timeInfo;
-	//memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
-	char *iptr = (char*)data->inputBuffer;
-	char *iptr2 = (char*)inputBuffer;
+	
+	if(data->outputReady) {
 	char *optr = (char*)data->outputBuffer;
 	char *optr2 = (char*)outputBuffer;
 	for( unsigned long i=0;i<framesPerBuffer;i++ ) {
-		*iptr++ =  *iptr2++;
 		*optr2++ = *optr++;
 	}
-		
-	//	data->inputReady = true;
-	 //socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
-	  	//	t->cData.inputReady = false;
-	  		//printf("transmitter timestamp: %d\n", t->cData.packetCounter); fflush(stdout);
-	//  		packetCounter++; r
+	data->outputReady = false;
+	++c_out;
+	}
+	
+	//if(!data->inputReady) {
+	char *iptr = (char*)data->inputBuffer;
+	char *iptr2 = (char*)inputBuffer;
+	for( unsigned long i=0;i<framesPerBuffer;i++ ) {
+		*iptr++ =  *iptr2++;
+	}
+	//data->inputReady = true;
 	++c_in;
+	
 	return paContinue;
 }
 
@@ -70,17 +74,18 @@ static int callbackInput(  const void *inputBuffer, void *outputBuffer,
 	CallbackData *data = (CallbackData*)userData;
 
 	(void) timeInfo;
-	//memcpy(data->inputBuffer, inputBuffer, framesPerBuffer);
+
+	//if(!data->inputReady && (inputBuffer != NULL)) {
 	char *ptr = (char*)data->inputBuffer;
 	char *iptr = (char*)inputBuffer;
 	for( unsigned long i=0;i<framesPerBuffer;i++ )
-		*ptr++ =  *iptr++;
-	//	data->inputReady = true;
-	 //socket->putData(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
-	  	//	t->cData.inputReady = false;
-	  		//printf("transmitter timestamp: %d\n", t->cData.packetCounter); fflush(stdout);
-	//  		packetCounter++; r
+		data->inputBuffer[i] = ((char*)inputBuffer)[i];
+		//*ptr++ =  *iptr++;
+		
+	//data->inputReady = true;
+	
 	++c_in;
+	//}
 	return paContinue;
 }
 
@@ -95,14 +100,14 @@ static int callbackOutput(  const void *inputBuffer, void *outputBuffer,
 	(void) timeInfo;
 
 	//if( data->outputReady ) {
-		//memcpy(outputBuffer, data->outputBuffer, framesPerBuffer);
+
 		char *ptr = (char*)data->outputBuffer;
 		char *optr = (char*)outputBuffer;
 		for( unsigned long i=0;i<framesPerBuffer;i++ )
 			*optr++ =  *ptr++;
 		//data->outputReady = false;
+		++c_out;
 	//}
-	++c_out;
 	return paContinue;
 }
 
@@ -391,22 +396,24 @@ void TransmitterCore::run()
 	
 	char inputBuf[1024];
 	while(1) {
-	  		Thread::sleep(TimerPort::getTimer());
+			//PaError err;
+			
 			//Pa_ReadStream(t->stream, inputBuf, 160);
+			//err = Pa_ReadStream(t->inputStream, inputBuf, 160);
 			
-			PaError err;
 			
-			err = Pa_ReadStream(t->inputStream, inputBuf, 160);
-			
-			if(err != paNoError) {
-				cout << "ReadStream error: " << Pa_GetErrorText(err) << endl;
-				return;
-			}
-			
-	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)inputBuf, 160);
+			//if(err != paNoError) {
+			//	cout << "ReadStream error: " << Pa_GetErrorText(err) << endl;
+			//	return;
+			//}
+		//	while( !t->cData.inputBuffer)
+			//	Thread::sleep(5);
+	  		t->socket->sendImmediate(160*packetCounter,(const unsigned char *)t->cData.inputBuffer, 160);
+	  		//t->cData.inputBuffer = false;
 	  		packetCounter++;
-	  		c_in++;
+	  		//c_in++;
 	  		TimerPort::incTimer(20);
+	  		Thread::sleep(TimerPort::getTimer());
     }
 }
 
@@ -426,7 +433,11 @@ void ReceiverCore::run()
 		
 	TimerPort::setTimer(20);
 	
+	for(int i=0; i<160; i++)
+		t->cData.outputBuffer[i] = 0;
+	
 	while(1) {
+		
   		long size;
 	  	const AppDataUnit* adu;
 	  	do {
@@ -435,19 +446,27 @@ void ReceiverCore::run()
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
 	    
-	   	PaError err;
+	   	//PaError err;
+	   	//while(t->cData.outputBuffer)
+	   	//	Thread::sleep(5);
+	   	
+	   	memcpy(t->cData.outputBuffer, (void*)adu->getData(), 160);
+	   	//t->cData.outputReady = true;
+	   	
+	   	//while( t->cData.outputReady )
+	   	//	Thread::sleep(5);
 	   	
 	   	//err = Pa_WriteStream(t->stream, adu->getData(), 160);
-	   	err = Pa_WriteStream(t->outputStream, adu->getData(), 160);
+	   	//err = Pa_WriteStream(t->outputStream, adu->getData(), 160);
 		
-		if(err != paNoError) {
+		/*if(err != paNoError) {
 			cout << "WriteStream error: " << Pa_GetErrorText(err) << endl;
 			return;
-		}
+		}*/
 		
 		//Thread::sleep(TimerPort::getTimer());
 		//TimerPort::incTimer(20);
-	    c_out++;
+	    //c_out++;
     }
 }
 
@@ -471,8 +490,9 @@ void TransceiverPa::openStream()
 	/* SINGLE STREAM */
 	
 	/*
+	
 	err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, 8000, 160,
-						paClipOff, NULL, NULL);
+						paClipOff, callback, &cData);
 	
 	if(err != paNoError) {
 		cout << Pa_GetErrorText(err) << endl;
@@ -480,10 +500,10 @@ void TransceiverPa::openStream()
 	}
 	*/
 	
-	/* TWO STREAMS */
+	 // TWO STREAMS
 	
 	err = Pa_OpenStream(&inputStream, &inputParameters, NULL, 8000, 160,
-						paClipOff, NULL, NULL);
+						paClipOff, callbackInput, &cData);
 	
 	if(err != paNoError) {
 		cout << Pa_GetErrorText(err) << endl;
@@ -491,28 +511,29 @@ void TransceiverPa::openStream()
 	}
 	
 	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 8000, 160,
-						paClipOff, NULL, NULL);
+						paClipOff, callbackOutput, &cData);
 	
 	if(err != paNoError) {
 		cout << Pa_GetErrorText(err) << endl;
 		return;
 	}
 	
-	
-	
-	
+
+
 	cData.inputBuffer = new char[160];
 	cData.outputBuffer = new char[160];
+	cData.outputReady = false;
+	cData.inputReady = false;
 	
-	/*  // SINGLE STREAM  
+	  // SINGLE STREAM  
 	
-	err = Pa_StartStream(stream);
+	/*err = Pa_StartStream(stream);
 	
 	if(err != paNoError) {
 		cout << Pa_GetErrorText(err) << endl;
 		return;
-	}
-	*/
+	}*/
+	
 
 	// TWO STREAMS
 	
