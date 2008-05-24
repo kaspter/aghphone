@@ -32,6 +32,7 @@ namespace agh {
 
 static volatile int c_in=0;
 static volatile int c_out=0;
+static volatile int underflowCount=0;
 
 static int callback( const void *inputBuffer, void *outputBuffer,
                       unsigned long framesPerBuffer,
@@ -94,25 +95,31 @@ static int callbackOutput(  const void *inputBuffer, void *outputBuffer,
 
 	(void) timeInfo;
 
-	char *ptr = (char*)data->ringBuffer + data->ringBufferReadIndex;
 	char *optr = (char*)outputBuffer;
-	
-	unsigned int toEnd = data->ringBufferEnd - optr;
-	
-	if(toEnd >= framesPerBuffer ) {
-		for(unsigned int i=0;i<framesPerBuffer;i++)
-	   		*optr++ = *ptr++;
+	if(data->ringBufferReadIndex == data->ringBufferWriteIndex) {
+		for(unsigned int i=0;i<framesPerBuffer;i++) {
+			*optr++ = 0;
+		}
+		underflowCount++;
 	} else {
-	   	for(unsigned int i=0;i<toEnd;i++)
-	   		*optr++ = *ptr++;
-	   	ptr = data->ringBuffer;
-	   	for(unsigned int i=0;i<framesPerBuffer-toEnd;i++)
-	   		*optr++ = *ptr++;
-	}
+		char *ptr = (char*)data->ringBuffer + data->ringBufferReadIndex;
+		unsigned int toEnd = data->ringBufferEnd - optr;
+		
+		if(toEnd >= framesPerBuffer ) {
+			for(unsigned int i=0;i<framesPerBuffer;i++)
+		   		*optr++ = *ptr++;
+		} else {
+		   	for(unsigned int i=0;i<toEnd;i++)
+		   		*optr++ = *ptr++;
+		   	ptr = data->ringBuffer;
+		   	for(unsigned int i=0;i<framesPerBuffer-toEnd;i++)
+		   		*optr++ = *ptr++;
+		}
 	   	
-	data->ringBufferReadIndex += framesPerBuffer;
-	if(data->ringBufferReadIndex >= RING_BUFFER_SIZE)
-		data->ringBufferReadIndex -= RING_BUFFER_SIZE;
+		data->ringBufferReadIndex += framesPerBuffer;
+		if(data->ringBufferReadIndex >= RING_BUFFER_SIZE)
+			data->ringBufferReadIndex -= RING_BUFFER_SIZE;
+	}
 	
 	++c_out;
 	return paContinue;
@@ -210,7 +217,7 @@ public:
 	{
 		while(1) {
 			Thread::sleep(1000);
-			printf("c_in: %d , c_out: %d\n", c_in, c_out);
+			printf("c_in: %d , c_out: %d, underflows: %d\n", c_in, c_out, underflowCount);
 			c_in = 0;
 			c_out = 0;
 		}
