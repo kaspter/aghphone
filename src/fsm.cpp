@@ -465,9 +465,15 @@ int main(int argc, char *argv[]) {
 	sleep(6000);
 	*/
 
-	ITransceiver *itr = new TransceiverPa();
+	TransceiverPa *itr = new TransceiverPa();
 	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
-	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));	
+	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
+	
+	if(argc >= 6)
+		itr->setInputDevice(atoi(argv[5]));
+	if(argc >= 7)
+		itr->setOutputDevice(atoi(argv[6]));
+		
 	itr->start();
 	
 	cout << "Press any key to exit..." << endl;
