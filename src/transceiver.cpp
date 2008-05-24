@@ -551,7 +551,7 @@ void TransceiverPa::openStream()
 						paClipOff, callbackInput, &cData);
 	
 	if(err != paNoError) {
-		cout << Pa_GetErrorText(err) << endl;
+		cout << "Input stream opening error: " << Pa_GetErrorText(err) << endl;
 		return;
 	}
 	
@@ -559,7 +559,7 @@ void TransceiverPa::openStream()
 						paClipOff, callbackOutput, &cData);
 	
 	if(err != paNoError) {
-		cout << Pa_GetErrorText(err) << endl;
+		cout << "Output stream opening error: " << Pa_GetErrorText(err) << endl;
 		return;
 	}
 	
