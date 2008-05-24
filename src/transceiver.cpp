@@ -24,6 +24,7 @@
 #include <portaudio.h>
 #include <ccrtp/rtp.h>
 #include <math.h>
+#include <cstdio>
 
 using namespace std;
 using namespace ost;
@@ -452,7 +453,12 @@ void ReceiverCore::run()
 	
 //	for(int i=0; i<160; i++)
 //		t->cData.outputBuffer[i] = 0;
-	
+
+	char tmpBuffer[2097152]; // 2MB buffer
+	int tmpWrite=0;
+	int tmpToWrite=7500;
+	char *tmpPtr=tmpBuffer;
+	int tmpCtr=0;
 	while(1) {
 		
   		long size;
@@ -464,6 +470,21 @@ void ReceiverCore::run()
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
 	    
 	   	char *ptr = (char*)adu->getData();
+	   	
+	   	if(tmpWrite < tmpToWrite) {
+	   		memcpy(tmpPtr, ptr, 160);
+	   		tmpPtr+=160;
+	   		tmpWrite++;
+	   	} else {
+	   		char fname[10];
+	   		sprintf(fname, "dump%d", tmpCtr++);
+	   		printf("dumping to file %s ...\n", fname);  
+	   		FILE *fout = fopen(fname, "wb");
+	   		fwrite(tmpBuffer, sizeof(char), tmpWrite*160, fout);
+	   		fclose(fout);
+	   		tmpWrite=0;
+	   	}
+	   	
 	   	char *optr = t->cData.ringBuffer + t->cData.ringBufferWriteIndex;
 	   	
 	   	int toEnd = t->cData.ringBufferEnd - optr;
@@ -477,6 +498,8 @@ void ReceiverCore::run()
 	   		for(int i=0;i<160-toEnd;i++)
 	   			*optr++ = *ptr++;
 	   	}
+	   	
+	   	
 	   	
 	   	t->cData.ringBufferWriteIndex += 160;
 	   	if(t->cData.ringBufferWriteIndex >= RING_BUFFER_SIZE)
