@@ -558,7 +558,7 @@ void TransceiverPa::openStream()
 	
 	 // TWO STREAMS
 	
-	err = Pa_OpenStream(&inputStream, &inputParameters, NULL, 44100.0, framesPerBuffer,
+	err = Pa_OpenStream(&inputStream, &inputParameters, NULL, 8000.0, framesPerBuffer,
 						paClipOff, callbackInput, &cData);
 	
 	if(err != paNoError) {
@@ -566,7 +566,7 @@ void TransceiverPa::openStream()
 		return;
 	}
 	
-	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 44100.0, framesPerBuffer,
+	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 8000.0, framesPerBuffer,
 						paClipOff, callbackOutput, &cData);
 	
 	if(err != paNoError) {
