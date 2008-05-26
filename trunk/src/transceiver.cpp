@@ -478,6 +478,7 @@ void ReceiverCore::run()
 	    
 	   	sampleType *ptr = (sampleType*)adu->getData();
 	   	
+	   	/*
 	   	if(tmpWrite < tmpToWrite) {
 	   		memcpy(tmpPtr, ptr, t->framesPerBuffer*sizeof(sampleType));
 	   		tmpPtr+=t->framesPerBuffer*sizeof(sampleType);
@@ -494,6 +495,7 @@ void ReceiverCore::run()
 	   		fclose(fout);
 	   		tmpWrite=0;
 	   	}
+	   	*/
 	   	
 	   	sampleType *optr = t->cData.ringBuffer + t->cData.ringBufferWriteIndex;
 	   	
@@ -520,6 +522,8 @@ void ReceiverCore::run()
 
 void TransceiverPa::openStream()
 {
+	cout << "Opening streams, sample size: " << sizeof(sampleType) << ", sample rate: " << 8000 << endl;
+	
 	PaStreamParameters inputParameters, outputParameters;
 	PaError err;
 	
