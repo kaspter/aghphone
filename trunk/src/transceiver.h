@@ -27,6 +27,7 @@
 #include <string>
 
 #include <portaudio.h>
+#include <alsa/asoundlib.h>
 #include <ccrtp/rtp.h>
 
 using namespace std;
@@ -128,6 +129,7 @@ public:
 };
 
 class TransceiverPa;
+class TransceiverAlsa;
 
 class TransmitterCore : public Thread, public TimerPort {
 	TransceiverPa* t;
@@ -145,6 +147,26 @@ class ReceiverCore : public Thread, public TimerPort {
 public:
 	ReceiverCore(TransceiverPa* tpa);
 	~ReceiverCore();
+	
+	void run();
+};
+
+class TransmitterAlsaCore : public Thread, public TimerPort {
+	TransceiverAlsa* t;
+	
+public:
+	TransmitterAlsaCore(TransceiverAlsa* tpa);
+	~TransmitterAlsaCore();
+	
+	void run();
+};
+
+class ReceiverAlsaCore : public Thread, public TimerPort {
+	TransceiverAlsa* t;
+	
+public:
+	ReceiverAlsaCore(TransceiverAlsa* tpa);
+	~ReceiverAlsaCore();
 	
 	void run();
 };
@@ -194,6 +216,62 @@ private:
 public: 
 	TransceiverPa();
 	~TransceiverPa();
+	vector<IDevice*> getAvailableInputDevices() const;
+	vector<IDevice*> getAvailableOutputDevices() const;
+	int setInputDevice(const IDevice& dev);
+	int setOutputDevice(const IDevice& dev);
+	int setInputDevice(const int id);
+	int setOutputDevice(const int id);
+	int setCodec(int codec);
+	int setLocalEndpoint(const IPV4Address& addr, int port);
+	int setRemoteEndpoint(const IPV4Address& addr, int port);
+	
+	int start();
+	int stop();
+};
+
+class TransceiverAlsa : public ITransceiver {
+private:
+
+	friend class TransmitterAlsaCore;
+	friend class ReceiverAlsaCore;
+
+	//DeviceFactoryPa* devMgr;
+	const IDevice* inputDevice;
+	const IDevice* outputDevice;
+	
+	IPV4Address localAddress;
+	int localPort;
+	IPV4Address remoteAddress;
+	int remotePort;
+	
+	CallbackData cData;
+	RTPSession *socket;
+	
+	TransmitterAlsaCore *tCore;
+	ReceiverAlsaCore *rCore;
+	
+	int framesPerBuffer;
+	int sample_rate;
+	
+	snd_pcm_t *playback_handle;
+	snd_pcm_t *capture_handle;
+	snd_pcm_sframes_t delayNow;
+	snd_pcm_state_t state;
+	
+	float delay, minDelay, maxDelay, stretch, tempoChane, fdel;
+	bool adr, ringing;
+	int readyFrames, prebuffer, preframes, prepackets, frame_size;
+	short *shortBuffer;
+	bool working;
+	sampleType sampleBuffer[65536];
+	short *samples;
+	float *audioBuffer;
+	
+	void openStream();
+public: 
+	TransceiverAlsa();
+	~TransceiverAlsa();
 	vector<IDevice*> getAvailableInputDevices() const;
 	vector<IDevice*> getAvailableOutputDevices() const;
 	int setInputDevice(const IDevice& dev);
