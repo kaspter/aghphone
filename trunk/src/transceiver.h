@@ -264,11 +264,29 @@ private:
 	int readyFrames, prebuffer, preframes, prepackets, frame_size;
 	short *shortBuffer;
 	bool working;
-	sampleType sampleBuffer[65536];
+	sampleType sampleBuffer[2048];
 	short *samples;
 	float *audioBuffer;
 	
+	
+	long inputBufferSize;
+	long inputBufferCursor;
+	long inputBufferCursor2;
+	long inputBufferReady;
+	sampleType inputBuffer[4096];
+	long outputBufferSize;
+	long outputBufferCursor;
+	long outputBufferCursor2;
+	long outputBufferReady;
+	sampleType outputBuffer[4096];
+	
 	void openStream();
+	snd_pcm_t* alsa_set_params(snd_pcm_t *pcm_handle, int rw);
+	bool alsa_can_read(snd_pcm_t *dev, int frames);
+	void alsa_fill_w(snd_pcm_t *pcm_handle);
+	int alsa_read(snd_pcm_t *handle, unsigned char* buf, int nsamples);
+	int alsa_write(snd_pcm_t *handle, unsigned char* buf, int nsamples);
+	
 public: 
 	TransceiverAlsa();
 	~TransceiverAlsa();
