@@ -22,6 +22,7 @@
 #include "transceiver.h"
 #include "restypes.h"
 #include <portaudio.h>
+#include <alsa/asoundlib.h>
 #include <ccrtp/rtp.h>
 #include <math.h>
 #include <cstdio>
@@ -566,7 +567,7 @@ void TransceiverPa::openStream()
 		return;
 	}
 	
-	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 8000.0, framesPerBuffer,
+	err = Pa_OpenStream(&outputStream, NULL, &outputParameters, 00.0, framesPerBuffer,
 						paClipOff, callbackOutput, &cData);
 	
 	if(err != paNoError) {
@@ -613,6 +614,350 @@ void TransceiverPa::openStream()
 	
 
 	cout << "Stream(s) opened successfully" << endl;	
+} 
+
+
+
+
+/* TransceiverAlsa implementation */
+
+TransceiverAlsa::TransceiverAlsa()
+{
+	playback_handle = NULL;
+	adr = false;
+	readyFrames = 0;
+	delay = 0.0;
+	frame_size = 160;
+	shortBuffer = new short[65536];
+	samples = new short[1024];
+	audioBuffer = new float[4096];
+	sample_rate = 8000;
+}
+
+TransceiverAlsa::~TransceiverAlsa()
+{
+	delete shortBuffer;
+	delete samples;
+	delete audioBuffer;
+	
+	if( tCore )
+		delete tCore;
+	
+	if( rCore )
+		delete rCore;
+	
+	delete socket;
+	cout << "RTP session closed" << endl;
+}
+
+vector<IDevice*> TransceiverAlsa::getAvailableInputDevices() const
+{
+	vector<IDevice*> v;
+	
+	return v;
+}
+
+vector<IDevice*> TransceiverAlsa::getAvailableOutputDevices() const
+{
+	vector<IDevice*> v;
+	
+	return v;
+}
+
+int TransceiverAlsa::setInputDevice(const IDevice& dev)
+{
+	inputDevice = &dev;
+	
+	return 0;
+}
+
+int TransceiverAlsa::setInputDevice(const int id)
+{
+	//inputDevice = &devMgr->getDevice(id);
+	
+	return 0;
+}
+
+int TransceiverAlsa::setOutputDevice(const IDevice& dev)
+{
+	outputDevice = &dev;
+	
+	return 0;
+}
+
+int TransceiverAlsa::setOutputDevice(const int id)
+{
+	//outputDevice = &devMgr->getDevice(id);
+	
+	return 0;
+}
+
+int TransceiverAlsa::setCodec(int codec)
+{
+	/*
+	 *  TODO: Implement codec factory to get a codec object by id 
+	 */ 
+	 
+	return 0;
+}
+
+int TransceiverAlsa::setLocalEndpoint(const IPV4Address& addr, int port)
+{
+	localAddress = addr;
+	localPort = port;
+	
+	return 0;
+}
+
+int TransceiverAlsa::setRemoteEndpoint(const IPV4Address& addr, int port)
+{
+	remoteAddress = addr;
+	remotePort = port;
+	
+	return 0;
+}
+
+int TransceiverAlsa::start()
+{
+	if( (localPort == -1 ) ) {
+		cout << "Endpoint error: " << localAddress << ":" << localPort << endl;
+		return TransceiverStartResult::LOCAL_ENDPOINT_ERROR;
+	}
+	
+	if( ( remotePort == -1 ) || ( !remoteAddress) ) {
+		printf("error2\n");
+		return TransceiverStartResult::REMOTE_ENDPOINT_ERROR;
+	}
+	
+	cout << "Opening streams" << endl;
+	openStream();
+	
+	cout << "Creating Transmitter core" << endl;
+	tCore = new TransmitterAlsaCore(this);
+	
+	cout << "Creating Receiver core" << endl;
+	rCore = new ReceiverAlsaCore(this);
+
+	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
+
+	//socket->setSchedulingTimeout(10000);
+	socket->setExpireTimeout(50);
+	
+	
+	if( !socket->addDestination( IPV4Host(remoteAddress.getAddress()), remotePort ) ) {
+		/*
+		 * TODO: Implement ccrtp connection failure
+		 */
+		cout << "CCRTP destination connection failure: " << IPV4Host(remoteAddress.getAddress()) << ":" << remotePort << endl;
+		return -1;
+	}
+	
+	socket->setPayloadFormat( StaticPayloadFormat( sptPCMU ) );
+
+	socket->startRunning();
+	
+	cData.socket = socket;
+	cData.packetCounter = 0;
+	
+	tCore->start();
+	cout << "Transmitter core started" << endl;
+	
+	rCore->start();
+	cout << "Receiver core started" << endl;
+	
+	CallbackMonitor *cm = new CallbackMonitor();
+	
+	cm->start();
+	
+	return TransceiverStartResult::SUCCESS;
+}
+
+int TransceiverAlsa::stop()
+{
+	if( tCore )
+		delete tCore;
+	
+	return 0;
+}
+
+TransmitterAlsaCore::TransmitterAlsaCore(TransceiverAlsa* tpa)
+{
+	t = tpa;
+}
+
+TransmitterAlsaCore::~TransmitterAlsaCore()
+{
+	terminate();
+	snd_pcm_drop(t->capture_handle);
+	snd_pcm_close(t->capture_handle);
+	t->capture_handle = NULL;
+}
+
+void TransmitterAlsaCore::run()
+{	
+	setCancel(cancelImmediate);
+
+	snd_pcm_start(t->capture_handle);
+
+  	if( t->socket->RTPDataQueue::isActive() )
+		cout << "active." << endl;
+	else
+	    cerr << "not active." << endl;
+
+	
+	TimerPort::setTimer(20);
+	
+	int packetCounter = 0;
+	
+	while(1) {
+		int err = snd_pcm_readi(t->capture_handle, t->samples, 1024);
+		if(err < 0) {
+			if(packetCounter % 50)
+				cout << "Alsa recording error: " << snd_strerror(err) << endl;
+			snd_pcm_state_t pcm_state = snd_pcm_state(t->capture_handle);
+			if(pcm_state == SND_PCM_STATE_XRUN) {
+				snd_pcm_prepare(t->capture_handle);
+				snd_pcm_start(t->capture_handle);
+			}
+		} else if (err > 0) {
+			for(int i=0;i<err;i++)
+				t->audioBuffer[i] = (float) t->samples[i];
+				 
+	  		t->socket->sendImmediate(err*sizeof(sampleType)*packetCounter,(const unsigned char *)t->samples, err*sizeof(sampleType));
+	  		packetCounter++;
+	  		
+		}
+			  		TimerPort::incTimer(20);
+	  		Thread::sleep(TimerPort::getTimer());
+    }
+}
+
+ReceiverAlsaCore::ReceiverAlsaCore(TransceiverAlsa* tpa)
+{
+	t = tpa;
+}
+
+ReceiverAlsaCore::~ReceiverAlsaCore()
+{
+	terminate();
+	snd_pcm_drop(t->playback_handle);
+	snd_pcm_close(t->playback_handle);
+	t->playback_handle = NULL;
+}
+
+void ReceiverAlsaCore::run()
+{	
+	TimerPort::setTimer(20);
+	
+	while(1) {	
+  		long size;
+	  	const AppDataUnit* adu;
+	  	do {
+	  		adu = t->socket->getData(t->socket->getFirstTimestamp());
+	  		if( NULL == adu )
+	  			Thread::sleep(5);
+	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
+	    
+	   	sampleType *ptr = (sampleType*)adu->getData();
+
+	  	TimerPort::incTimer(20);
+	  	Thread::sleep(TimerPort::getTimer());
+	   	
+	   	snd_pcm_writei(t->playback_handle, ptr, size/2);
+    }
+}
+
+void TransceiverAlsa::openStream()
+{
+	int err;
+	
+	// output stream
+	
+	snd_pcm_hw_params_t *hw_params;
+	
+	err = snd_pcm_open(&playback_handle, "default" , SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_malloc(&hw_params);
+	if(err < 0) cout << "Alsa error: cannot allocate hw params structure : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_any(playback_handle, hw_params);
+	if(err < 0) cout << "Alsa error: cannot initialize hw params structure : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_access(playback_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+	if(err < 0) cout << "Alsa error: cannot set access type : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_format(playback_handle, hw_params, SND_PCM_FORMAT_S16_LE);
+	if(err < 0) cout << "Alsa error: cannot set sample format : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_channels(playback_handle, hw_params, 1);
+	if(err < 0) cout << "Alsa error: cannot set channel count : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_rate(playback_handle, hw_params, sample_rate, 0);
+	if(err < 0) cout << "Alsa error: cannot sample rate : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params(playback_handle, hw_params);
+	if(err < 0) cout << "Alsa error: cannot hw parameters : " << snd_strerror(err) << endl;
+	snd_pcm_hw_params_free(hw_params);
+	
+	snd_pcm_sw_params_t *sw_params_out;
+	
+	err = snd_pcm_sw_params_malloc(&sw_params_out);
+	if(err < 0) cout << "Alsa error: cannot allocate sw params structure : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params_current(playback_handle, sw_params_out);
+	if(err < 0) cout << "Alsa error: cannot init sw params structure : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params_set_avail_min(playback_handle, sw_params_out, frame_size);
+	if(err < 0) cout << "Alsa error: cannot set avail min : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params(playback_handle, sw_params_out);
+	if(err < 0) cout << "Alsa error: cannot set parameters : " << snd_strerror(err) << endl;
+	err = snd_pcm_prepare(playback_handle);
+	if(err < 0) cout << "Alsa error: cannot prepare audio interface for use : " << snd_strerror(err) << endl;
+	
+	// input stream
+	
+	err = snd_pcm_open(&capture_handle, "plughw:0" , SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
+	err = snd_pcm_nonblock(capture_handle, 1);
+	if(err < 0) cout << "Alsa error: cannot set nonblocking on capture device : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_malloc(&hw_params);
+	if(err < 0) cout << "Alsa error: cannot allocate params structure : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_any(capture_handle, hw_params);
+	if(err < 0) cout << "Alsa error: cannot initialize params : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_access(capture_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+	if(err < 0) cout << "Alsa error: cannot set access on capture device : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_format(capture_handle, hw_params, SND_PCM_FORMAT_S16_LE);
+	if(err < 0) cout << "Alsa error: cannot set format : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 1);
+	if(err < 0) cout << "Alsa error: cannot set channel count : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_rate(capture_handle, hw_params, sample_rate, 0);
+	if(err < 0) cout << "Alsa error: cannot set sample rate : " << snd_strerror(err) << endl;
+	snd_pcm_uframes_t bufsize = 1024;
+	switch(sample_rate) {
+		case 8000:
+			bufsize >>= 2;
+			break;
+		case 16000:
+			bufsize >>= 1;
+			break;
+		case 32000:
+			bufsize = 1024;
+			break;
+		default:
+			cout << "Frame rate " << sample_rate << " not supported" << endl;
+	}
+	err = snd_pcm_hw_params_set_buffer_size_near(capture_handle, hw_params, &bufsize);
+	if(err < 0) cout << "Alsa error: cannot set buffer size near : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params(capture_handle, hw_params);
+	if(err < 0) cout << "Alsa error: cannot set hw params : " << snd_strerror(err) << endl;
+	snd_pcm_hw_params_free(hw_params);
+	
+	snd_pcm_sw_params_t *sw_params_in;
+
+	err = snd_pcm_sw_params_malloc(&sw_params_in);
+	if(err < 0) cout << "Alsa error: cannot allocate sw params for capture device : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params_current(capture_handle, sw_params_in);
+	if(err < 0) cout << "Alsa error: cannot initialize params : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params_set_avail_min(capture_handle, sw_params_in, bufsize/2);
+	if(err < 0) cout << "Alsa error: cannot set avail mi : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params_set_stop_threshold(capture_handle, sw_params_in, bufsize*4);
+	if(err < 0) cout << "Alsa error: cannot set stop threshold : " << snd_strerror(err) << endl;
+	err = snd_pcm_sw_params(capture_handle, sw_params_in);
+	if(err < 0) cout << "Alsa error: cannot set sw params : " << snd_strerror(err) << endl;
+	err = snd_pcm_prepare(capture_handle);
+	if(err < 0) cout << "Alsa error: cannot prepare capture device : " << snd_strerror(err) << endl;
 } 
 
 } /* namespace agh */

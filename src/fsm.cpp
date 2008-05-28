@@ -465,7 +465,7 @@ int main(int argc, char *argv[]) {
 	sleep(6000);
 	*/
 
-	TransceiverPa *itr = new TransceiverPa();
+	TransceiverAlsa *itr = new TransceiverAlsa();
 	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
 	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
 	
