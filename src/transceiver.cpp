@@ -462,11 +462,11 @@ void ReceiverCore::run()
 //	for(int i=0; i<160; i++)
 //		t->cData.outputBuffer[i] = 0;
 
-	sampleType tmpBuffer[2097152]; // 4MB buffer
-	int tmpWrite=0;
-	int tmpToWrite=3000;
-	sampleType *tmpPtr=tmpBuffer;
-	int tmpCtr=0;
+	//sampleType tmpBuffer[2097152]; // 4MB buffer
+	//int tmpWrite=0;
+	//int tmpToWrite=3000;
+	//sampleType *tmpPtr=tmpBuffer;
+	//int tmpCtr=0;
 	while(1) {
 		
   		long size;
@@ -511,9 +511,6 @@ void ReceiverCore::run()
 	   		for(int i=0;i<160-toEnd;i++)
 	   			*optr++ = *ptr++;
 	   	}
-	   	
-	   	
-	   	
 	   	
 	   	t->cData.ringBufferWriteIndex += 160;
 	   	if(t->cData.ringBufferWriteIndex >= RING_BUFFER_SIZE)
@@ -632,6 +629,15 @@ TransceiverAlsa::TransceiverAlsa()
 	samples = new short[1024];
 	audioBuffer = new float[4096];
 	sample_rate = 8000;
+	
+	inputBufferSize = 4096;
+	inputBufferCursor = 0;
+	inputBufferCursor2 = 0;
+	inputBufferReady = 0;
+	outputBufferSize = 4096;
+	outputBufferCursor = 0;
+	outputBufferCursor2 = 0;
+	outputBufferReady = 0;
 }
 
 TransceiverAlsa::~TransceiverAlsa()
@@ -797,38 +803,74 @@ void TransmitterAlsaCore::run()
 {	
 	setCancel(cancelImmediate);
 
-	snd_pcm_start(t->capture_handle);
+	int err = snd_pcm_start(t->capture_handle);
+	if(err < 0) cout << "Alsa error : cannot start capture stream : " << snd_strerror(err) << endl;
 
   	if( t->socket->RTPDataQueue::isActive() )
 		cout << "active." << endl;
 	else
 	    cerr << "not active." << endl;
 
-	
 	TimerPort::setTimer(20);
 	
 	int packetCounter = 0;
+	int samples=128*t->sample_rate/8000;
+	//int size = samples*2;
+	
+	unsigned char buf[2048];
 	
 	while(1) {
-		int err = snd_pcm_readi(t->capture_handle, t->samples, 1024);
-		if(err < 0) {
-//			if(packetCounter % 50)
-//				cout << "Alsa recording error: " << snd_strerror(err) << endl;
-			snd_pcm_state_t pcm_state = snd_pcm_state(t->capture_handle);
-			if(pcm_state == SND_PCM_STATE_XRUN) {
-				snd_pcm_prepare(t->capture_handle);
-				snd_pcm_start(t->capture_handle);
-			}
-		} else if (err > 0) {
-			for(int i=0;i<err;i++)
-				t->audioBuffer[i] = (float) t->samples[i];
-				 
-	  		t->socket->sendImmediate(err*sizeof(sampleType)*packetCounter,(const unsigned char *)t->samples, err*sizeof(sampleType));
-	  		packetCounter++;
-	  		c_in++;
-		}
+		if(t->alsa_can_read(t->capture_handle, samples)) {
+			
+			int err = t->alsa_read(t->capture_handle, buf, samples);
+			if(err <= 0) {
+				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
+			} else {
+				sampleType *optr = t->inputBuffer + t->inputBufferCursor;
+				sampleType *ptr = (sampleType*)buf;
+			   	
+			   	long toEnd = t->inputBufferSize - t->inputBufferCursor;
+			   	
+			   	if(toEnd >= err ) {
+			   		for(long i=0;i<err;i++) *optr++ = *ptr++;
+			   	} else {
+			   		for(long i=0;i<toEnd;i++) *optr++ = *ptr++;
+			   		optr = t->inputBuffer;
+			   		for(long i=0;i<err-toEnd;i++) *optr++ = *ptr++;
+			   	}
+			   	
+			   	t->inputBufferCursor += err;
+			   	if(t->inputBufferCursor >= t->inputBufferSize)
+			   		t->inputBufferCursor -= t->inputBufferSize;	
+			   	
+			   	t->inputBufferReady += err;
+			   					
+				if( t->inputBufferReady >= 160 ) {
+					sampleType *ptr1 = t->inputBuffer + t->inputBufferCursor2;
+					sampleType *ptr2 = (sampleType*)buf;
+					
+					long toEnd2 = t->inputBufferSize - t->inputBufferCursor2;
+					
+					if(toEnd2 >= 160) {
+						for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
+					} else {
+						for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
+						ptr2 = (sampleType*)buf;
+						for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
+					}
+					
+					t->inputBufferCursor2 += 160;
+					if(t->inputBufferCursor2 >= t->inputBufferSize)
+						t->inputBufferCursor2 -= t->inputBufferSize;
+					
+	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)buf, 160*sizeof(sampleType));
+	  				packetCounter++;
+	  				c_in++;
 			  		TimerPort::incTimer(20);
-	  		Thread::sleep(TimerPort::getTimer());
+	  				Thread::sleep(TimerPort::getTimer());
+				}
+			}
+		}
     }
 }
 
@@ -849,6 +891,8 @@ void ReceiverAlsaCore::run()
 {	
 	TimerPort::setTimer(20);
 	
+	unsigned char buf[2048];
+	
 	while(1) {	
   		long size;
 	  	const AppDataUnit* adu;
@@ -856,18 +900,58 @@ void ReceiverAlsaCore::run()
 	  		adu = t->socket->getData(t->socket->getFirstTimestamp());
 	  		if( NULL == adu )
 	  			Thread::sleep(5);
-	  	} while ( (NULL == adu) || ( (size = adu->getSize()) <= 0 ) );
+	  	} while ( (NULL == adu) || ( (size = adu->getSize()/2) <= 0 ) );
 	    
 	   	sampleType *ptr = (sampleType*)adu->getData();
-
-	  	TimerPort::incTimer(20);
-	  	Thread::sleep(TimerPort::getTimer());
-	   	
-	   	snd_pcm_writei(t->playback_handle, ptr, size/2);
-	   	c_out++;
+		sampleType *optr = t->outputBuffer + t->outputBufferCursor;
+		
+		long toEnd = t->outputBufferSize - t->outputBufferCursor;
+		if(toEnd >= size ) {
+			for(long i=0;i<size;i++) *optr++ = *ptr++;
+		} else {
+			for(long i=0;i<toEnd;i++) *optr++ = *ptr++;
+			optr = t->outputBuffer;
+			for(long i=0;i<size-toEnd;i++) *optr++ = *ptr++;
+		}
+			   	
+		t->outputBufferCursor += size;
+		if(t->outputBufferCursor >= t->outputBufferSize)
+			t->outputBufferCursor -= t->outputBufferSize;	
+			   	
+		t->outputBufferReady += size;
+			   					
+		if( t->outputBufferReady >= 160 ) {
+			sampleType *ptr1 = t->outputBuffer + t->outputBufferCursor2;
+			sampleType *ptr2 = (sampleType*)buf;
+					
+			long toEnd2 = t->outputBufferSize - t->outputBufferCursor2;
+					
+			if(toEnd2 >= 160) {
+				for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
+			} else {
+				for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
+				ptr2 = (sampleType*)buf;
+				for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
+			}
+			
+			int err = t->alsa_write(t->playback_handle,  buf, 160);
+			if(err > 0) {
+				t->outputBufferReady -= err/2;
+				t->outputBufferCursor2 += err/2;
+				if(t->outputBufferCursor2  >= t->outputBufferSize)
+					t->outputBufferCursor2 -= t->outputBufferSize;
+	  			
+	  			c_out++;
+	  				 	
+	  		 	TimerPort::incTimer(20);
+	  			Thread::sleep(TimerPort::getTimer());
+			} else {
+				cout << "Couldn't write to the playback device" << endl;
+			}
+		}
     }
 }
-
+/* // TWO STREAMS
 void TransceiverAlsa::openStream()
 {
 	int err;
@@ -1001,5 +1085,168 @@ void TransceiverAlsa::openStream()
 	
 	snd_pcm_dump(capture_handle, log);
 } 
+*/
+
+// ONE STREAM
+void TransceiverAlsa::openStream()
+{
+	int err;
+	snd_output_t *log;
+	
+	snd_output_stdio_attach(&log, stderr, 0);
+	
+	err = snd_pcm_open(&capture_handle, "default", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	if(err < 0) cout << "Alsa error : cannot open capture device : " << snd_strerror(err) << endl;
+	
+	alsa_set_params(capture_handle, 0);
+	
+	cout << "[Capture device]:" << endl;
+	snd_pcm_dump(capture_handle, log);
+	
+	err = snd_pcm_open(&playback_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	if(err < 0) cout << "Alsa error : cannot open playback device : " << snd_strerror(err) << endl;
+	
+	alsa_set_params(playback_handle, 1);
+	
+}
+
+snd_pcm_t* TransceiverAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
+{
+	snd_pcm_hw_params_t *hwparams = NULL;
+	snd_pcm_sw_params_t *swparams = NULL;
+	int dir;
+	uint exact_uvalue;
+	unsigned long exact_ulvalue;
+	int channels = 1;
+	int err;
+	int rate = 8000;
+	int periodsize = 256;
+	int periods = 8;
+	snd_pcm_format_t format = SND_PCM_FORMAT_S16;
+	
+	snd_pcm_hw_params_alloca(&hwparams);
+	
+	err = snd_pcm_hw_params_any(pcm_handle, hwparams);
+	if(err < 0) cout << "Alsa error: cannot initialize hw params structure : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_access(pcm_handle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
+	if(err < 0) cout << "Alsa error: cannot set access type : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_format(pcm_handle, hwparams, format);
+	if(err < 0) cout << "Alsa error: cannot set sample format : " << snd_strerror(err) << endl;
+	err = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, channels);
+	if(err < 0) cout << "Alsa error: cannot set channel count : " << snd_strerror(err) << endl;
+	
+	exact_uvalue = rate;
+	dir = 0;
+	err = snd_pcm_hw_params_set_rate_near(pcm_handle, hwparams, &exact_uvalue, &dir);
+	if(err < 0) cout << "Alsa error: cannot set sample rate : " << snd_strerror(err) << endl;
+	if(dir != 0) cout << "Alsa error: " << rate << 
+		" Hz sample rate is not supported by your hardware. Using " << exact_uvalue << " Hz instead." << endl;
+	
+	periodsize = periodsize*(rate/8000);
+	exact_ulvalue=periodsize;
+	dir=0;
+	err = snd_pcm_hw_params_set_period_size_near(pcm_handle, hwparams, &exact_ulvalue, &dir);
+	if(err < 0) cout << "Alsa error: cannot set period size : " << snd_strerror(err) << endl;
+	if(dir != 0) cout << "Alsa error: " << periodsize << 
+		" period size is not supported by your hardware. Using " << exact_ulvalue << " instead." << endl;
+	periodsize = exact_ulvalue;
+		  
+	exact_uvalue=periods;
+	dir = 0; 
+	err = snd_pcm_hw_params_set_periods_near(pcm_handle, hwparams, &exact_uvalue, &dir);
+	if(err < 0) cout << "Alsa error: cannot set periods : " << snd_strerror(err) << endl;
+	if(dir != 0) cout << "Alsa error: " << periods << 
+		" periods is not supported by your hardware. Using " << exact_uvalue << " instead." << endl;
+	
+	err = snd_pcm_hw_params(pcm_handle, hwparams);
+	if(err < 0) cout << "Alsa error: cannot hw parameters : " << snd_strerror(err) << endl;
+	
+	if(rw) {
+		snd_pcm_sw_params_alloca(&swparams);
+		snd_pcm_sw_params_current(pcm_handle, swparams);
+		err = snd_pcm_sw_params_set_start_threshold(pcm_handle, swparams, periodsize*2);
+		if(err < 0) cout << "Alsa error: cannot start threshold : " << snd_strerror(err) << endl;
+		
+		err = snd_pcm_sw_params_set_stop_threshold(pcm_handle, swparams, periodsize*periods);
+		if(err < 0) cout << "Alsa error: cannot stop threshold : " << snd_strerror(err) << endl;
+		
+		err = snd_pcm_sw_params(pcm_handle, swparams);
+		if(err < 0) cout << "Alsa error: cannot start sw params : " << snd_strerror(err) << endl;
+	
+	}
+	
+	return 0;
+}
+
+bool TransceiverAlsa::alsa_can_read(snd_pcm_t *dev, int frames)
+{
+	snd_pcm_sframes_t avail;
+	int err;
+	
+	avail = snd_pcm_avail_update(dev);
+	if(avail < 0) {
+		snd_pcm_drain(dev);
+		err = snd_pcm_recover(dev, avail, 0);
+		if(err) cout << "Alsa error: snd_pcm_recover failed on capture device : " << snd_strerror(err) << endl;
+		err = snd_pcm_start(dev);
+		if(err) cout << "Alsa error: snd_pcm_start failed after recover on capture device : " << snd_strerror(err) << endl;
+	}
+	
+	return avail >= frames;
+}
+
+int TransceiverAlsa::alsa_read(snd_pcm_t *handle, unsigned char* buf, int nsamples)
+{
+	int err;
+	err = snd_pcm_readi(handle, buf, nsamples);
+	if(err < 0) {
+		if(err == -EPIPE) {
+			snd_pcm_prepare(handle);
+			err = snd_pcm_readi(handle, buf, nsamples);
+			if(err < 0) cout << "Alsa error : snd_pcm_readi failed : " << snd_strerror(err) << endl;
+		} else if(err == 0) {
+			cout << "snd_pcm_readi return 0" << endl;
+		}
+	}
+	
+	return err;
+}
+
+int TransceiverAlsa::alsa_write(snd_pcm_t *handle, unsigned char* buf, int nsamples)
+{
+	int err;
+	if ((err = snd_pcm_writei(handle, buf, nsamples)) < 0) {
+		if(err == -EPIPE) {
+			snd_pcm_prepare(handle);
+			alsa_fill_w(handle);
+			err = snd_pcm_writei(handle, buf, nsamples);
+			if(err < 0) cout << "Alsa error : failed writing " << nsamples << " samples on output device : " << snd_strerror(err) << endl;
+		} else if(err != -EWOULDBLOCK) {
+			cout << "Alsa error : snd_pcm_writei failed : " << snd_strerror(err) << endl;
+		}
+	} else if(err!=nsamples) {
+		cout << "Alsa warning : only " << err << " samples written instead of " << nsamples << endl;
+	}
+	return err;
+}
+
+void TransceiverAlsa::alsa_fill_w(snd_pcm_t *pcm_handle)
+{
+	snd_pcm_hw_params_t *hwparams=NULL;
+	int channels;
+	snd_pcm_uframes_t buffer_size;
+	int buffer_size_bytes;
+	void *buffer;
+	
+	snd_pcm_hw_params_alloca(&hwparams);
+	snd_pcm_hw_params_current(pcm_handle, hwparams);
+	
+	snd_pcm_hw_params_get_channels(hwparams, (unsigned int*)&channels);
+	snd_pcm_hw_params_get_buffer_size(hwparams, &buffer_size);
+	buffer_size /= 2;
+	buffer_size_bytes = buffer_size*channels*2;
+	memset(buffer, 0, buffer_size_bytes);
+	snd_pcm_writei(pcm_handle, buffer, buffer_size);
+}
 
 } /* namespace agh */
