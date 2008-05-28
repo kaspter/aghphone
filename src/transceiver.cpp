@@ -872,6 +872,9 @@ void TransceiverAlsa::openStream()
 {
 	int err;
 	snd_pcm_info_t *info_in, *info_out;
+	snd_output_t *log;
+	
+	snd_output_stdio_attach(&log, stderr, 0);
 	
 	// output stream
 	
@@ -883,13 +886,7 @@ void TransceiverAlsa::openStream()
 	err = snd_pcm_info(playback_handle, info_out);
 	if(err < 0) cout << "Alsa error: cannot get info on playback device : " << snd_strerror(err) << endl;
 	else {
-		cout << "Playback device:" << endl << 
-		"\tdevice:" << snd_pcm_info_get_device(info_out) << endl <<
-		"\tsubdevice:" << snd_pcm_info_get_subdevice(info_out) << endl <<
-		"\tcard:" << snd_pcm_info_get_card(info_out) << endl <<
-		"\tid:" << snd_pcm_info_get_id(info_out) << endl <<
-		"\tname:" << snd_pcm_info_get_name(info_out) << endl <<
-		"\tsubdevice_name:" << snd_pcm_info_get_subdevice_name(info_out) << endl;
+
 	}
 	
 	err = snd_pcm_hw_params_malloc(&hw_params);
@@ -906,6 +903,10 @@ void TransceiverAlsa::openStream()
 	if(err < 0) cout << "Alsa error: cannot sample rate : " << snd_strerror(err) << endl;
 	err = snd_pcm_hw_params(playback_handle, hw_params);
 	if(err < 0) cout << "Alsa error: cannot hw parameters : " << snd_strerror(err) << endl;
+	
+	cout << "Playback device:" << endl;
+	snd_pcm_hw_params_dump(hw_params, log);
+	
 	snd_pcm_hw_params_free(hw_params);
 	
 	snd_pcm_sw_params_t *sw_params_out;
@@ -921,13 +922,17 @@ void TransceiverAlsa::openStream()
 	err = snd_pcm_prepare(playback_handle);
 	if(err < 0) cout << "Alsa error: cannot prepare audio interface for use : " << snd_strerror(err) << endl;
 	
+	snd_pcm_sw_params_dump(sw_params_out, log);
+	
+	snd_pcm_dump(playback_handle, log);
+	
 	// input stream
 	
 	err = snd_pcm_open(&capture_handle, "default" , SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
 	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
 	
 	snd_pcm_info_alloca(&info_in);
-	err = snd_pcm_info(playback_handle, info_in);
+	err = snd_pcm_info(capture_handle, info_in);
 	if(err < 0) cout << "Alsa error: cannot get info on capture device : " << snd_strerror(err) << endl;
 	else {
 		cout << "Capture device:" << endl << 
@@ -971,6 +976,10 @@ void TransceiverAlsa::openStream()
 	if(err < 0) cout << "Alsa error: cannot set buffer size near : " << snd_strerror(err) << endl;
 	err = snd_pcm_hw_params(capture_handle, hw_params);
 	if(err < 0) cout << "Alsa error: cannot set hw params : " << snd_strerror(err) << endl;
+	
+	cout << endl << endl << "Capture device" << endl;
+	snd_pcm_hw_params_dump(hw_params, log);
+	
 	snd_pcm_hw_params_free(hw_params);
 	
 	snd_pcm_sw_params_t *sw_params_in;
@@ -987,6 +996,10 @@ void TransceiverAlsa::openStream()
 	if(err < 0) cout << "Alsa error: cannot set sw params : " << snd_strerror(err) << endl;
 	err = snd_pcm_prepare(capture_handle);
 	if(err < 0) cout << "Alsa error: cannot prepare capture device : " << snd_strerror(err) << endl;
+	
+	snd_pcm_sw_params_dump(sw_params_in, log);
+	
+	snd_pcm_dump(capture_handle, log);
 } 
 
 } /* namespace agh */
