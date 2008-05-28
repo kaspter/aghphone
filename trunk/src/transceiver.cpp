@@ -812,8 +812,8 @@ void TransmitterAlsaCore::run()
 	while(1) {
 		int err = snd_pcm_readi(t->capture_handle, t->samples, 1024);
 		if(err < 0) {
-			if(packetCounter % 50)
-				cout << "Alsa recording error: " << snd_strerror(err) << endl;
+//			if(packetCounter % 50)
+//				cout << "Alsa recording error: " << snd_strerror(err) << endl;
 			snd_pcm_state_t pcm_state = snd_pcm_state(t->capture_handle);
 			if(pcm_state == SND_PCM_STATE_XRUN) {
 				snd_pcm_prepare(t->capture_handle);
@@ -825,7 +825,7 @@ void TransmitterAlsaCore::run()
 				 
 	  		t->socket->sendImmediate(err*sizeof(sampleType)*packetCounter,(const unsigned char *)t->samples, err*sizeof(sampleType));
 	  		packetCounter++;
-	  		
+	  		c_in++;
 		}
 			  		TimerPort::incTimer(20);
 	  		Thread::sleep(TimerPort::getTimer());
@@ -864,12 +864,14 @@ void ReceiverAlsaCore::run()
 	  	Thread::sleep(TimerPort::getTimer());
 	   	
 	   	snd_pcm_writei(t->playback_handle, ptr, size/2);
+	   	c_out++;
     }
 }
 
 void TransceiverAlsa::openStream()
 {
 	int err;
+	snd_pcm_info_t *info_in, *info_out;
 	
 	// output stream
 	
@@ -877,6 +879,19 @@ void TransceiverAlsa::openStream()
 	
 	err = snd_pcm_open(&playback_handle, "default" , SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
+	snd_pcm_info_alloca(&info_out);
+	err = snd_pcm_info(playback_handle, info_out);
+	if(err < 0) cout << "Alsa error: cannot get info on playback device : " << snd_strerror(err) << endl;
+	else {
+		cout << "Playback device:" << endl << 
+		"\tdevice:" << snd_pcm_info_get_device(info_out) << endl <<
+		"\tsubdevice:" << snd_pcm_info_get_subdevice(info_out) << endl <<
+		"\tcard:" << snd_pcm_info_get_card(info_out) << endl <<
+		"\tid:" << snd_pcm_info_get_id(info_out) << endl <<
+		"\tname:" << snd_pcm_info_get_name(info_out) << endl <<
+		"\tsubdevice_name:" << snd_pcm_info_get_subdevice_name(info_out) << endl;
+	}
+	
 	err = snd_pcm_hw_params_malloc(&hw_params);
 	if(err < 0) cout << "Alsa error: cannot allocate hw params structure : " << snd_strerror(err) << endl;
 	err = snd_pcm_hw_params_any(playback_handle, hw_params);
@@ -908,8 +923,22 @@ void TransceiverAlsa::openStream()
 	
 	// input stream
 	
-	err = snd_pcm_open(&capture_handle, "plughw:0" , SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	err = snd_pcm_open(&capture_handle, "default" , SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
 	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
+	
+	snd_pcm_info_alloca(&info_in);
+	err = snd_pcm_info(playback_handle, info_in);
+	if(err < 0) cout << "Alsa error: cannot get info on capture device : " << snd_strerror(err) << endl;
+	else {
+		cout << "Capture device:" << endl << 
+		"\tdevice:" << snd_pcm_info_get_device(info_in) << endl <<
+		"\tsubdevice:" << snd_pcm_info_get_subdevice(info_in) << endl <<
+		"\tcard:" << snd_pcm_info_get_card(info_in) << endl <<
+		"\tid:" << snd_pcm_info_get_id(info_in) << endl <<
+		"\tname:" << snd_pcm_info_get_name(info_in) << endl <<
+		"\tsubdevice_name:" << snd_pcm_info_get_subdevice_name(info_in) << endl;
+	}
+	
 	err = snd_pcm_nonblock(capture_handle, 1);
 	if(err < 0) cout << "Alsa error: cannot set nonblocking on capture device : " << snd_strerror(err) << endl;
 	err = snd_pcm_hw_params_malloc(&hw_params);
