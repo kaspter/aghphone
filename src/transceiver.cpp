@@ -620,6 +620,11 @@ void TransceiverPa::openStream()
 
 TransceiverAlsa::TransceiverAlsa()
 {
+	devMgr = new DeviceFactoryAlsa();
+	
+	setInputDevice(devMgr->getDefaultInputDevice());
+	setOutputDevice(devMgr->getDefaultOutputDevice());
+	
 	playback_handle = NULL;
 	adr = false;
 	readyFrames = 0;
@@ -1095,18 +1100,21 @@ void TransceiverAlsa::openStream()
 	
 	snd_output_stdio_attach(&log, stderr, 0);
 	
-	err = snd_pcm_open(&capture_handle, "default", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	if(err < 0) cout << "Alsa error : cannot open capture device : " << snd_strerror(err) << endl;
+	err = snd_pcm_open(&capture_handle, inputDevice->getName().c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	if(err < 0) cout << "Alsa error : cannot open capture device (" << inputDevice->getName() << ") : " << snd_strerror(err) << endl;
 	
 	alsa_set_params(capture_handle, 0);
 	
 	cout << "[Capture device]:" << endl;
 	snd_pcm_dump(capture_handle, log);
 	
-	err = snd_pcm_open(&playback_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	if(err < 0) cout << "Alsa error : cannot open playback device : " << snd_strerror(err) << endl;
+	err = snd_pcm_open(&playback_handle, outputDevice->getName().c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	if(err < 0) cout << "Alsa error : cannot open playback device (" << outputDevice->getName() << "): " << snd_strerror(err) << endl;
 	
 	alsa_set_params(playback_handle, 1);
+	
+	cout << "[Playback device]:" << endl;
+	snd_pcm_dump(playback_handle, log);
 	
 }
 
