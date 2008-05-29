@@ -25,6 +25,7 @@
 #include <vector>
 #include <cc++/address.h>
 #include <string>
+#include <map>
 
 #include <portaudio.h>
 #include <alsa/asoundlib.h>
@@ -105,6 +106,30 @@ public:
 	int getSupportedChannelCountInput() const { return channelCountInput; }
 };
 
+class DeviceAlsa : public IDevice {
+private:
+	string name;
+	const vector<double> sampleRates;
+public:
+	DeviceAlsa(string name) { this->name = name; }
+
+	const string& getName() const { return (const string&)name; }
+	int getID() const { return 0; }
+	const string& getHostAPI() const { return ""; }
+	
+	double getDefaultLowInputLatency() const { return 0.0; }
+	double getDefaultLowOutputLatency() const { return 0.0; }
+	double getDefaultHighInputLatency() const { return 0.0; }
+	double getDefaultHighOutputLatency() const { return 0.0; }
+	double getDefaultSampleRate() const { return 0.0; }
+	const vector<double>& getSupportedSampleRatesHalfDuplexInput() const { return (const vector<double>&)sampleRates; }
+	const vector<double>& getSupportedSampleRatesHalfDuplexOutput() const { return (const vector<double>&)sampleRates; }
+	const vector<double>& getSupportedSampleRatesFullDuplex() const { return (const vector<double>&)sampleRates; }
+	
+	int getSupportedChannelCountOutput() const { return 0; }
+	int getSupportedChannelCountInput() const { return 0; }
+};
+
 class IDeviceFactory {
 public:
 	virtual ~IDeviceFactory() {}
@@ -126,6 +151,37 @@ public:
 	
 	IDevice& getDefaultInputDevice() const;
 	IDevice& getDefaultOutputDevice() const;
+};
+
+class DeviceFactoryAlsa : public IDeviceFactory {
+	IDevice *defaultDevice;
+	vector<DeviceAlsa*> devs;
+	map<string, DeviceAlsa*> devmap;
+public:
+	DeviceFactoryAlsa()
+	{
+		DeviceAlsa *dev = new DeviceAlsa("default");
+		devs.push_back(dev);
+		devmap["default"] = dev;
+		defaultDevice = dev;
+	}
+	
+	int getDeviceCount() const { return devs.size(); }
+	IDevice& getDevice(int index) const { return (IDevice& )(*devs[index]); }
+	IDevice& getDevice(const string name) { 
+		map<string, DeviceAlsa*>::iterator iter; 
+		if((iter = devmap.find(name)) != devmap.end())
+			return *((*iter).second);
+		 else {
+		 	DeviceAlsa *dev = new DeviceAlsa(name);
+		 	devmap[name] = dev;
+		 	devs.push_back(dev);
+		 	return *dev;
+		 }
+	}
+	
+	IDevice& getDefaultInputDevice() const { return *defaultDevice; }
+	IDevice& getDefaultOutputDevice() const { return *defaultDevice; }
 };
 
 class TransceiverPa;
@@ -236,7 +292,7 @@ private:
 	friend class TransmitterAlsaCore;
 	friend class ReceiverAlsaCore;
 
-	//DeviceFactoryPa* devMgr;
+	DeviceFactoryAlsa* devMgr;
 	const IDevice* inputDevice;
 	const IDevice* outputDevice;
 	
@@ -269,6 +325,8 @@ private:
 	float *audioBuffer;
 	
 	
+	
+	
 	long inputBufferSize;
 	long inputBufferCursor;
 	long inputBufferCursor2;
@@ -296,6 +354,8 @@ public:
 	int setOutputDevice(const IDevice& dev);
 	int setInputDevice(const int id);
 	int setOutputDevice(const int id);
+	int setInputDevice(const string name) { inputDevice = &(devMgr->getDevice(name)); return 0; }
+	int setOutputDevice(const string name) { outputDevice = &(devMgr->getDevice(name)); return 0; }
 	int setCodec(int codec);
 	int setLocalEndpoint(const IPV4Address& addr, int port);
 	int setRemoteEndpoint(const IPV4Address& addr, int port);

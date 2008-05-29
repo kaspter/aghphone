@@ -470,9 +470,9 @@ int main(int argc, char *argv[]) {
 	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
 	
 	if(argc >= 6)
-		itr->setInputDevice(atoi(argv[5]));
+		itr->setInputDevice(argv[5]);
 	if(argc >= 7)
-		itr->setOutputDevice(atoi(argv[6]));
+		itr->setOutputDevice(argv[6]);
 		
 	itr->start();
 	
