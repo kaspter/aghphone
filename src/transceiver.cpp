@@ -841,7 +841,7 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
-				//  ---- !! ---
+/*				//  ---- !! ---
 			
 				for(int i=0;i<160;i++) {
 					((sampleType*)buf)[i] = (sampleType)((i%2)*1000);
@@ -849,7 +849,7 @@ void TransmitterAlsaCore::run()
 				err	= 160;
 			
 				// ----- !! ----
-				
+*/				
 				sampleType *optr = t->inputBuffer + t->inputBufferCursor;
 				sampleType *ptr = (sampleType*)buf;
 			   	
@@ -891,7 +891,7 @@ void TransmitterAlsaCore::run()
 						
 					t->inputBufferReady -= 160;
 					
-					// ------ !! ----
+/*					// ------ !! ----
 					sampleType *ptr3=(sampleType*)(outbuf+outbufcursor*periodsize);
 					for(int i=0;i<160;i++) {
 						if( (ptr3[i] != (sampleType)0) && (ptr3[i] != (sampleType)1000) ) {
@@ -904,7 +904,7 @@ void TransmitterAlsaCore::run()
 						}
 					}
 					// ------ !! ----
-					
+*/					
 	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 	  				packetCounter++;
 	  				c_in = outbufcursor;
@@ -948,7 +948,7 @@ void ReceiverAlsaCore::run()
 	  		if( NULL == adu )
 	  			Thread::sleep(5);
 	  	} while ( (NULL == adu) || ( (size = adu->getSize()/2) <= 0 ) );
-	    
+//	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 	   	sampleType *ptr = (sampleType*)adu->getData();
 		sampleType *optr = t->outputBuffer + t->outputBufferCursor;
 		
@@ -981,7 +981,7 @@ void ReceiverAlsaCore::run()
 				for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
 			}
 			
-			int err = t->alsa_write(t->playback_handle,  buf, 160);
+			int err = t->alsa_write(t->playback_handle,  buf, 160*sizeof(sampleType));
 			if(err > 0) {
 				t->outputBufferReady -= err/2;
 				t->outputBufferCursor2 += err/2;
@@ -990,8 +990,8 @@ void ReceiverAlsaCore::run()
 	  			
 	  			c_out++;
 	  				 	
-	  		 	TimerPort::incTimer(20);
-	  			Thread::sleep(TimerPort::getTimer());
+//	  		 	TimerPort::incTimer(20);
+//	  			Thread::sleep(TimerPort::getTimer());
 			} else {
 				cout << "Couldn't write to the playback device" << endl;
 			}
