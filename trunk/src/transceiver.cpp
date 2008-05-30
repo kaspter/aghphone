@@ -824,13 +824,32 @@ void TransmitterAlsaCore::run()
 	
 	unsigned char buf[2048];
 	
+	unsigned char *outbuf;
+	
+	int nperiods = 20;
+	int periodsize = 160*sizeof(sampleType);
+	outbuf = new unsigned char[nperiods*periodsize];
+	int outbufcursor=0;
+	
 	while(1) {
 		if(t->alsa_can_read(t->capture_handle, samples)) {
 			
 			int err = t->alsa_read(t->capture_handle, buf, samples);
+			
+			
+			
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
+				//  ---- !! ---
+			
+				for(int i=0;i<160;i++) {
+					((sampleType*)buf)[i] = (sampleType)((i%2)*1000);
+				}
+				err	= 160;
+			
+				// ----- !! ----
+				
 				sampleType *optr = t->inputBuffer + t->inputBufferCursor;
 				sampleType *ptr = (sampleType*)buf;
 			   	
@@ -849,10 +868,12 @@ void TransmitterAlsaCore::run()
 			   		t->inputBufferCursor -= t->inputBufferSize;	
 			   	
 			   	t->inputBufferReady += err;
-			   					
+			   	
+			   	
+			   	
 				if( t->inputBufferReady >= 160 ) {
 					sampleType *ptr1 = t->inputBuffer + t->inputBufferCursor2;
-					sampleType *ptr2 = (sampleType*)buf;
+					sampleType *ptr2 = (sampleType*)(outbuf + outbufcursor*periodsize);
 					
 					long toEnd2 = t->inputBufferSize - t->inputBufferCursor2;
 					
@@ -860,17 +881,38 @@ void TransmitterAlsaCore::run()
 						for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
 					} else {
 						for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
-						ptr2 = (sampleType*)buf;
+						ptr1 = t->inputBuffer;
 						for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
 					}
 					
 					t->inputBufferCursor2 += 160;
 					if(t->inputBufferCursor2 >= t->inputBufferSize)
 						t->inputBufferCursor2 -= t->inputBufferSize;
+						
+					t->inputBufferReady -= 160;
 					
-	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)buf, 160*sizeof(sampleType));
+					// ------ !! ----
+					sampleType *ptr3=(sampleType*)(outbuf+outbufcursor*periodsize);
+					for(int i=0;i<160;i++) {
+						if( (ptr3[i] != (sampleType)0) && (ptr3[i] != (sampleType)1000) ) {
+							cout << "ZORRO ERRORRO : outbufcursor:" << outbufcursor <<
+							", inputBufferCursor:" << t->inputBufferCursor << ", inputBufferCursor2:" <<
+							t->inputBufferCursor2 << ", toEnd:" << toEnd << ", toEnd2:" << toEnd2 << 
+							", ready:" << t->inputBufferReady << ", packetCounter:" << packetCounter <<
+							",i:" << i << ",ptr3[i]:" << ptr3[i] << endl;
+							 break;
+						}
+					}
+					// ------ !! ----
+					
+	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 	  				packetCounter++;
-	  				c_in++;
+	  				c_in = outbufcursor;
+	  				
+	  				outbufcursor++;
+	  				if(outbufcursor >= nperiods)
+	  					outbufcursor = 0;
+	  				
 			  		TimerPort::incTimer(20);
 	  				Thread::sleep(TimerPort::getTimer());
 				}
@@ -935,7 +977,7 @@ void ReceiverAlsaCore::run()
 				for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
 			} else {
 				for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
-				ptr2 = (sampleType*)buf;
+				ptr1 = t->outputBuffer;
 				for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
 			}
 			
