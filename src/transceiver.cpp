@@ -35,6 +35,8 @@ namespace agh {
 static volatile int c_in=0;
 static volatile int c_out=0;
 static volatile int underflowCount=0;
+static volatile long readyOnInput=0;
+static volatile long readyOnOutput=0;
 
 static int callback( const void *inputBuffer, void *outputBuffer,
                       unsigned long framesPerBuffer,
@@ -221,7 +223,8 @@ public:
 	{
 		while(1) {
 			Thread::sleep(1000);
-			printf("c_in: %d , c_out: %d, underflows: %d\n", c_in, c_out, underflowCount);
+			printf("c_in: %d , c_out: %d, underflows: %d, readyOnInput: %ld, readyOnOutput: %ld\n", 
+				c_in, c_out, underflowCount, readyOnInput, readyOnOutput);
 			c_in = 0;
 			c_out = 0;
 		}
@@ -831,6 +834,8 @@ void TransmitterAlsaCore::run()
 	outbuf = new unsigned char[nperiods*periodsize];
 	int outbufcursor=0;
 	
+	int phase=0;
+	
 	while(1) {
 		if(t->alsa_can_read(t->capture_handle, samples)) {
 			
@@ -841,15 +846,18 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
-/*				//  ---- !! ---
+				//  ---- !! ---
 			
-				for(int i=0;i<160;i++) {
-					((sampleType*)buf)[i] = (sampleType)((i%2)*1000);
+				for(int i=0;i<err;i++) {
+					((sampleType*)buf)[i] = (sampleType)((phase-1000));
+					phase++;
+					if(phase > 2000)
+						phase = 0;
 				}
-				err	= 160;
+				//err	= 160;
 			
 				// ----- !! ----
-*/				
+				
 				sampleType *optr = t->inputBuffer + t->inputBufferCursor;
 				sampleType *ptr = (sampleType*)buf;
 			   	
@@ -916,6 +924,8 @@ void TransmitterAlsaCore::run()
 			  		TimerPort::incTimer(20);
 	  				Thread::sleep(TimerPort::getTimer());
 				}
+				
+				readyOnInput = t->inputBufferReady;
 			}
 		}
     }
@@ -943,45 +953,46 @@ void ReceiverAlsaCore::run()
 	while(1) {	
   		long size;
 	  	const AppDataUnit* adu;
-	  	do {
+	  	//do {
 	  		adu = t->socket->getData(t->socket->getFirstTimestamp());
-	  		if( NULL == adu )
-	  			Thread::sleep(5);
-	  	} while ( (NULL == adu) || ( (size = adu->getSize()/2) <= 0 ) );
+	  		//if( NULL == adu )
+	  		//	Thread::sleep(5);
+	  	if ( (NULL != adu) && ( (size = adu->getSize()/2) > 0 ) ) {
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
-	   	sampleType *ptr = (sampleType*)adu->getData();
-		sampleType *optr = t->outputBuffer + t->outputBufferCursor;
-		
-		long toEnd = t->outputBufferSize - t->outputBufferCursor;
-		if(toEnd >= size ) {
-			for(long i=0;i<size;i++) *optr++ = *ptr++;
-		} else {
-			for(long i=0;i<toEnd;i++) *optr++ = *ptr++;
-			optr = t->outputBuffer;
-			for(long i=0;i<size-toEnd;i++) *optr++ = *ptr++;
-		}
-			   	
-		t->outputBufferCursor += size;
-		if(t->outputBufferCursor >= t->outputBufferSize)
-			t->outputBufferCursor -= t->outputBufferSize;	
-			   	
-		t->outputBufferReady += size;
+		   	sampleType *ptr = (sampleType*)adu->getData();
+			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
+			
+			long toEnd = t->outputBufferSize - t->outputBufferCursor;
+			if(toEnd >= size ) {
+				for(long i=0;i<size;i++) *optr++ = *ptr++;
+			} else {
+				for(long i=0;i<toEnd;i++) *optr++ = *ptr++;
+				optr = t->outputBuffer;
+				for(long i=0;i<size-toEnd;i++) *optr++ = *ptr++;
+			}
+				   	
+			t->outputBufferCursor += size;
+			if(t->outputBufferCursor >= t->outputBufferSize)
+				t->outputBufferCursor -= t->outputBufferSize;	
+				   	
+			t->outputBufferReady += size;
+	  	}
 			   					
-		if( t->outputBufferReady >= 160 ) {
+		while( t->outputBufferReady >= t->framesPerBuffer ) {
 			sampleType *ptr1 = t->outputBuffer + t->outputBufferCursor2;
 			sampleType *ptr2 = (sampleType*)buf;
 					
 			long toEnd2 = t->outputBufferSize - t->outputBufferCursor2;
 					
-			if(toEnd2 >= 160) {
-				for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
+			if(toEnd2 >= t->framesPerBuffer) {
+				for(int i=0;i<t->framesPerBuffer;i++) *ptr2++ = *ptr1++;
 			} else {
 				for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
 				ptr1 = t->outputBuffer;
-				for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
+				for(int i=0;i<t->framesPerBuffer-toEnd2;i++) *ptr2++ = *ptr1++;
 			}
 			
-			int err = t->alsa_write(t->playback_handle,  buf, 160*sizeof(sampleType));
+			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
 			if(err > 0) {
 				t->outputBufferReady -= err/2;
 				t->outputBufferCursor2 += err/2;
@@ -993,9 +1004,13 @@ void ReceiverAlsaCore::run()
 //	  		 	TimerPort::incTimer(20);
 //	  			Thread::sleep(TimerPort::getTimer());
 			} else {
-				cout << "Couldn't write to the playback device" << endl;
+				cout << "Couldn't write to the playback device. Tried to write " <<
+				t->framesPerBuffer*sizeof(sampleType) << " bytes of data." << endl;
+				Thread::sleep(5);
+				break;
 			}
 		}
+		readyOnOutput = t->outputBufferReady;
     }
 }
 /* // TWO STREAMS
@@ -1170,7 +1185,7 @@ snd_pcm_t* TransceiverAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	int channels = 1;
 	int err;
 	int rate = 8000;
-	int periodsize = 256;
+	int periodsize = 320;
 	int periods = 8;
 	snd_pcm_format_t format = SND_PCM_FORMAT_S16;
 	
@@ -1200,6 +1215,7 @@ snd_pcm_t* TransceiverAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	if(dir != 0) cout << "Alsa error: " << periodsize << 
 		" period size is not supported by your hardware. Using " << exact_ulvalue << " instead." << endl;
 	periodsize = exact_ulvalue;
+	this->framesPerBuffer = periodsize;
 		  
 	exact_uvalue=periods;
 	dir = 0; 
@@ -1295,6 +1311,11 @@ void TransceiverAlsa::alsa_fill_w(snd_pcm_t *pcm_handle)
 	snd_pcm_hw_params_get_buffer_size(hwparams, &buffer_size);
 	buffer_size /= 2;
 	buffer_size_bytes = buffer_size*channels*2;
+	/*
+	 * TODO: here buffer is allocated but the memory is not freed later
+	 * 		check if we can free it right after snd_pcm_writei
+	 */
+	buffer = alloca(buffer_size_bytes);
 	memset(buffer, 0, buffer_size_bytes);
 	snd_pcm_writei(pcm_handle, buffer, buffer_size);
 }
