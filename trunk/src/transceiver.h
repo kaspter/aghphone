@@ -36,17 +36,27 @@ using namespace ost;
 
 #define RING_BUFFER_SIZE	480
 
+
 namespace agh {
 
 #define SAMPLE_TYPE	paInt16
 typedef short sampleType;
+
+class AghRtpSession : public SymmetricRTPSession {
+public:
+	~AghRtpSession() {}
+	 
+	AghRtpSession(const InetHostAddress &host);
+	AghRtpSession(const InetHostAddress &host, unsigned short port);
+	uint32 getLastTimestamp(const SyncSource *src=NULL) const;
+};
 
 typedef struct {
 	sampleType *inputBuffer;
 	sampleType *outputBuffer;
 	bool outputReady;
 	bool inputReady;
-	RTPSession *socket;
+	AghRtpSession *socket;
 	int packetCounter;
 	sampleType ringBuffer[RING_BUFFER_SIZE];
 	sampleType *ringBufferEnd;
@@ -261,7 +271,7 @@ private:
 	PaStream* outputStream;
 	//PaStream* stream;
 	CallbackData cData;
-	RTPSession *socket;
+	AghRtpSession *socket;
 	
 	TransmitterCore *tCore;
 	ReceiverCore *rCore;
@@ -302,7 +312,7 @@ private:
 	int remotePort;
 	
 	CallbackData cData;
-	RTPSession *socket;
+	AghRtpSession *socket;
 	
 	TransmitterAlsaCore *tCore;
 	ReceiverAlsaCore *rCore;
