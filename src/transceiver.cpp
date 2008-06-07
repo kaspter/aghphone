@@ -370,7 +370,7 @@ int TransceiverPa::start()
 	cout << "Creating Receiver core" << endl;
 	rCore = new ReceiverCore(this);
 
-	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
+	socket = new AghRtpSession( IPV4Host(localAddress.getAddress()), localPort );
 
 	//socket->setSchedulingTimeout(10000);
 	socket->setExpireTimeout(50);
@@ -752,7 +752,8 @@ int TransceiverAlsa::start()
 	cout << "Creating Receiver core" << endl;
 	rCore = new ReceiverAlsaCore(this);
 
-	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
+	//socket = new SymmetricRTPSession( IPV4Host(localAddress.getAddress()), localPort );
+	socket = new AghRtpSession( IPV4Host(localAddress.getAddress()), localPort );
 
 	//socket->setSchedulingTimeout(10000);
 	socket->setExpireTimeout(51);
@@ -834,7 +835,7 @@ void TransmitterAlsaCore::run()
 	outbuf = new unsigned char[nperiods*periodsize];
 	int outbufcursor=0;
 	//uint32 timestamp = t->socket>getCurrentTimestamp() + 160*packetCounter;
-	uint32 timestamp = 160*packetCounter;
+	uint32 timestamp = t->socket->getCurrentTimestamp() + 320;
 	
 	int phase=0;
 	
@@ -916,11 +917,11 @@ void TransmitterAlsaCore::run()
 
 //	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 					//t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
-					t->socket->setExpireTimeout(160 * 1000);
+					t->socket->setExpireTimeout(320 * 1000);
 					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 
 	  				packetCounter++;
-					timestamp += 160;
+					timestamp += 320;
 	  				c_in = outbufcursor;
 	  				
 	  				outbufcursor++;
@@ -1342,5 +1343,45 @@ void TransceiverAlsa::alsa_fill_w(snd_pcm_t *pcm_handle)
 	memset(buffer, 0, buffer_size_bytes);
 	snd_pcm_writei(pcm_handle, buffer, buffer_size);
 }
+
+
+AghRtpSession::AghRtpSession(const InetHostAddress &host) :
+	SymmetricRTPSession(host) 
+{
+}
+
+AghRtpSession::AghRtpSession(const InetHostAddress &host, unsigned short port) : 
+	SymmetricRTPSession(host, port) 
+{
+}
+
+uint32 AghRtpSession::getLastTimestamp(const SyncSource *src) const {
+	if ( src && !isMine(*src) ) return 0L;
+	
+	recvLock.readLock();
+
+	uint32 ts = 0;	
+	if (src != NULL) {
+		SyncSourceLink* srcm = getLink(*src);
+		IncomingRTPPktLink* l = srcm->getFirst();
+		
+		while (l) {
+			ts = l->getTimestamp();
+			l = l->getSrcNext();
+		}
+	} else {
+		IncomingRTPPktLink* l = recvFirst;
+		
+		while (l) {
+			ts = l->getTimestamp();
+			l = l->getNext();
+		}
+	}
+	
+	recvLock.unlock();
+	return ts;
+}
+
+
 
 } /* namespace agh */
