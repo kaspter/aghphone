@@ -821,7 +821,7 @@ void TransmitterAlsaCore::run()
 
 	TimerPort::setTimer(20);
 	
-	int packetCounter = 0;
+	int packetCounter = 1;
 	int samples=128*t->sample_rate/8000;
 	//int size = samples*2;
 	
@@ -833,6 +833,8 @@ void TransmitterAlsaCore::run()
 	int periodsize = 160*sizeof(sampleType);
 	outbuf = new unsigned char[nperiods*periodsize];
 	int outbufcursor=0;
+	//uint32 timestamp = t->socket>getCurrentTimestamp() + 160*packetCounter;
+	uint32 timestamp = 160*packetCounter;
 	
 	int phase=0;
 	
@@ -840,8 +842,6 @@ void TransmitterAlsaCore::run()
 		if(t->alsa_can_read(t->capture_handle, samples)) {
 			
 			int err = t->alsa_read(t->capture_handle, buf, samples);
-			
-			
 			
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
@@ -915,9 +915,12 @@ void TransmitterAlsaCore::run()
 */					
 
 //	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
-					t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
+					//t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
+					t->socket->setExpireTimeout(160 * 1000);
+					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 
 	  				packetCounter++;
+					timestamp += 160;
 	  				c_in = outbufcursor;
 	  				
 	  				outbufcursor++;
@@ -952,6 +955,8 @@ void ReceiverAlsaCore::run()
 	TimerPort::setTimer(20);
 	
 	unsigned char buf[2048];
+	short mybuf[2*1024*1024];
+	unsigned long mybuf_index = 0;
 	
 	while(1) {	
   		long size;
@@ -964,6 +969,21 @@ void ReceiverAlsaCore::run()
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 		   	sampleType *ptr = (sampleType*)adu->getData();
 			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
+
+			if (mybuf_index >= 50*1024) {
+				cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
+				FILE *file = fopen("dupencja.dat", "w");
+				cout << "dupa1" <<  endl;
+				cout << "dupa1" <<  endl;
+				fwrite(mybuf, sizeof(sampleType),  50*1024, file);
+				mybuf_index = 0;
+				cout << "dupa1" <<  endl;
+				fclose(file);
+				cout << "dupa1" <<  endl;
+			}
+			memcpy(mybuf+mybuf_index, ptr, 160*sizeof(sampleType));
+			mybuf_index += 160;
+			c_in = mybuf_index;
 			
 			long toEnd = t->outputBufferSize - t->outputBufferCursor;
 			if(toEnd >= size ) {
