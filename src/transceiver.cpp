@@ -755,7 +755,7 @@ int TransceiverAlsa::start()
 	socket = new RTPSession( IPV4Host(localAddress.getAddress()), localPort );
 
 	//socket->setSchedulingTimeout(10000);
-	socket->setExpireTimeout(50);
+	socket->setExpireTimeout(51);
 	
 	
 	if( !socket->addDestination( IPV4Host(remoteAddress.getAddress()), remotePort ) ) {
