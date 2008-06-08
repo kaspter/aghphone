@@ -834,10 +834,10 @@ void TransmitterAlsaCore::run()
 	
 	unsigned char *outbuf;
 	
-	short mybuf[2*1024*1024];
-	long msbuf[2][50*1024];
-	unsigned long mybuf_index = 0;
-	long sendCounter=0;
+//	short mybuf[2*1024*1024];
+//	long msbuf[2][50*1024];
+//	unsigned long mybuf_index = 0;
+//	long sendCounter=0;
 	
 	int nperiods = 20;
 	int periodsize = t->framesPerBuffer*sizeof(sampleType);
@@ -979,9 +979,9 @@ void ReceiverAlsaCore::run()
 	TimerPort::setTimer(20);
 	
 	unsigned char buf[2048];
-	short mybuf[2*1024*1024];
-	long msbuf[2][50*1024];
-	unsigned long mybuf_index = 0;
+//	short mybuf[2*1024*1024];
+//	long msbuf[2][50*1024];
+//	unsigned long mybuf_index = 0;
 	long recvCounter=0;
 	
 	FILE *logHandle = fopen("logsrecv.txt", "w");
