@@ -1092,10 +1092,15 @@ void ReceiverAlsaCore::run()
 				for(int i=0;i<t->framesPerBuffer-toEnd2;i++) *ptr2++ = *ptr1++;
 			}
 			
-//			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
-			int err = 160;
+			
+			long ms1;
+			ms1 = t->getTimeMs();
+			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
+			//int err = 160;
 			if(err > 0) {
-				
+				msbuf[0][recvCounter] = mybuf_index-1;
+				msbuf[1][recvCounter] = t->getTimeMs()-ms1;
+				recvCounter++;
 //				printf("written %d frames to output at ", err);
 //				t->printTime();
 				
