@@ -886,7 +886,7 @@ void TransmitterAlsaCore::run()
 				}
 				memcpy(mybuf+mybuf_index, buf, err*sizeof(sampleType));
 				mybuf_index += err;
-				
+				sendCounter++;
 				//printf("read %d frames from input at ", err);
 				//t->printTime();
 				
