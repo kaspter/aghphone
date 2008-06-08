@@ -974,7 +974,7 @@ void TransmitterAlsaCore::run()
 					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 
 	  				packetCounter++;
-					timestamp += 320;
+					timestamp += 160;
 	  				c_in = outbufcursor;
 	  				
 	  				outbufcursor++;
