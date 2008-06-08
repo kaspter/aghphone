@@ -851,15 +851,15 @@ void TransmitterAlsaCore::run()
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
 				
-				printf("read %d frames from input at ", err);
-				t->printTime();
+				//printf("read %d frames from input at ", err);
+				//t->printTime();
 				
 				//  ---- !! ---
 			
 				for(int i=0;i<err;i++) {
-					((sampleType*)buf)[i] = (sampleType)((phase-1000));
+					((sampleType*)buf)[i] = (sampleType)((phase-10));
 					phase++;
-					if(phase > 2000)
+					if(phase > 20)
 						phase = 0;
 				}
 				//err	= 160;
@@ -1026,8 +1026,8 @@ void ReceiverAlsaCore::run()
 			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
 			if(err > 0) {
 				
-				printf("written %d frames to output at ", err);
-				t->printTime();
+//				printf("written %d frames to output at ", err);
+//				t->printTime();
 				
 				t->outputBufferReady -= err;
 				t->outputBufferCursor2 += err;
