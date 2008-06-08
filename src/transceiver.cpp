@@ -965,9 +965,9 @@ void ReceiverAlsaCore::run()
 	
 	unsigned char buf[2048];
 	short mybuf[2*1024*1024];
-	long msbuf[2][2*1024*1024];
+	long msbuf[2][50*1024];
 	unsigned long mybuf_index = 0;
-	unsigned long recvCounter=0;
+	long recvCounter=0;
 	
 	while(1) {	
   		long size;
@@ -996,7 +996,7 @@ void ReceiverAlsaCore::run()
 				
 				long i=0;
 				while(i < 50*1024) {
-					fprintf(file2, "%ld\t%ld\n", i, mybuf[i]);
+					fprintf(file2, "%ld\t%d\n", i, mybuf[i]);
 					i++;
 				}
 				
