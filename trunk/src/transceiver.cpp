@@ -848,6 +848,8 @@ void TransmitterAlsaCore::run()
 	
 	int phase=0;
 	
+	FILE *logHandle = fopen("logs.txt", "w");
+	
 	while(1) {
 		if(t->alsa_can_read(t->capture_handle, samples)) {
 			
@@ -856,6 +858,7 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
+				fprintf(logHandle, "%ld [s]: %d bytes read from input\n", t->getTimeMs(), err);
 				//printf("read %d frames from input at ", err);
 				//t->printTime();
 				
@@ -930,48 +933,15 @@ void TransmitterAlsaCore::run()
 //	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 					//t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 					
-					
-					
-					
-					
-									
-				msbuf[0][sendCounter] = mybuf_index;
-				msbuf[1][sendCounter] = t->getTimeMs();
-	
-				if (mybuf_index >= 50*1024) {
-					cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
-					FILE *file2 = fopen("danes.txt", "w");
-					FILE *file3 = fopen("timingis.txt", "w");
-					cout << "dupa1" <<  endl;
-					cout << "dupa1" <<  endl;
-					
-					long i=0;
-					while(i < 50*1024) {
-						fprintf(file2, "%ld\t%d\n", i, mybuf[i]);
-						i++;
-					}
-					
-					for(i=0;i<sendCounter;i++)
-						fprintf(file3, "%ld\t%ld\n", msbuf[0][i], msbuf[1][i]);
-					
-					mybuf_index = 0;
-					cout << "dupa1" <<  endl;
-					fclose(file2);
-					fclose(file3);
-					cout << "dupa1" <<  endl;
-				}
-				memcpy(mybuf+mybuf_index, (const unsigned char *)(outbuf + outbufcursor*periodsize), err*sizeof(sampleType));
-				mybuf_index += 160;
-
-				sendCounter++;
-					
-					
-					
-					
-					
-					
 					t->socket->setExpireTimeout(320 * 1000);
 					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
+
+					fprintf(logHandle, "%ld [s]: %d bytes sent to the socket, packetCounter:%d, timestamp:%ld\n", t->getTimeMs(), 160*sizeof(sampleType), packetCounter, (long)timestamp);
+					
+					if(timestamp > 250*160) {
+						fclose(logHandle);
+						logHandle = fopen("logs1.txt", "w");
+					}
 
 	  				packetCounter++;
 					timestamp += 160;
@@ -1014,6 +984,8 @@ void ReceiverAlsaCore::run()
 	unsigned long mybuf_index = 0;
 	long recvCounter=0;
 	
+	FILE *logHandle = fopen("logsrecv.txt", "w");
+	
 	while(1) {	
   		long size;
 	  	const AppDataUnit* adu;
@@ -1022,42 +994,11 @@ void ReceiverAlsaCore::run()
 	  		//if( NULL == adu )
 	  		//	Thread::sleep(5);
 	  	if ( (NULL != adu) && ( (size = adu->getSize()/2) > 0 ) ) {
-	  		
+	  		fprintf(logHandle, "%ld [s]: %ld frames read from socket\n", t->getTimeMs(), size);
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 		   	sampleType *ptr = (sampleType*)adu->getData();
 			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
-			
-			msbuf[0][recvCounter] = mybuf_index;
-			msbuf[1][recvCounter] = t->getTimeMs();
 
-			if (mybuf_index >= 50*1024) {
-				cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
-				FILE *file = fopen("dupencja.dat", "w");
-				FILE *file2 = fopen("dane.txt", "w");
-				FILE *file3 = fopen("timingi.txt", "w");
-				cout << "dupa1" <<  endl;
-				cout << "dupa1" <<  endl;
-				fwrite(mybuf, sizeof(sampleType),  50*1024, file);
-				
-				long i=0;
-				while(i < 50*1024) {
-					fprintf(file2, "%ld\t%d\n", i, mybuf[i]);
-					i++;
-				}
-				
-				for(i=0;i<recvCounter;i++)
-					fprintf(file3, "%ld\t%ld\n", msbuf[0][i], msbuf[1][i]);
-				
-				mybuf_index = 0;
-				cout << "dupa1" <<  endl;
-				fclose(file);
-				fclose(file2);
-				fclose(file3);
-				cout << "dupa1" <<  endl;
-			}
-			memcpy(mybuf+mybuf_index, ptr, size*sizeof(sampleType));
-			mybuf_index += size;
-			c_in = mybuf_index;
 			
 			long toEnd = t->outputBufferSize - t->outputBufferCursor;
 			if(toEnd >= size ) {
@@ -1073,9 +1014,6 @@ void ReceiverAlsaCore::run()
 				t->outputBufferCursor -= t->outputBufferSize;	
 				   	
 			t->outputBufferReady += size;
-			
-			
-			recvCounter++;
 	  	}
 			   					
 		while( t->outputBufferReady >= t->framesPerBuffer ) {
@@ -1092,15 +1030,15 @@ void ReceiverAlsaCore::run()
 				for(int i=0;i<t->framesPerBuffer-toEnd2;i++) *ptr2++ = *ptr1++;
 			}
 			
-			
-			long ms1;
-			ms1 = t->getTimeMs();
 			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
 			//int err = 160;
 			if(err > 0) {
-				msbuf[0][recvCounter] = mybuf_index-1;
-				msbuf[1][recvCounter] = t->getTimeMs()-ms1;
+				fprintf(logHandle, "%ld [s]: %d frames written to the output\n", t->getTimeMs(), err);
 				recvCounter++;
+				if(recvCounter > 250) {
+					fclose(logHandle);
+					logHandle = fopen("logsrecv1.txt", "w");
+				}
 //				printf("written %d frames to output at ", err);
 //				t->printTime();
 				
