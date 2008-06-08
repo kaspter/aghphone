@@ -334,6 +334,8 @@ private:
 	short *samples;
 	float *audioBuffer;
 	
+	struct timeval startMs;
+	
 	struct timeval czas_start;
 	
 	
@@ -375,6 +377,9 @@ public:
 	
 	void initTime();
 	void printTime();
+	
+	void resetTimerMs();
+	long getTimeMs();
 };
 
 } /* namespace agh */
