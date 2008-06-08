@@ -856,37 +856,6 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
-				
-				
-				
-				msbuf[0][sendCounter] = mybuf_index;
-				msbuf[1][sendCounter] = t->getTimeMs();
-	
-				if (mybuf_index >= 50*1024) {
-					cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
-					FILE *file2 = fopen("danes.txt", "w");
-					FILE *file3 = fopen("timingis.txt", "w");
-					cout << "dupa1" <<  endl;
-					cout << "dupa1" <<  endl;
-					
-					long i=0;
-					while(i < 50*1024) {
-						fprintf(file2, "%ld\t%d\n", i, mybuf[i]);
-						i++;
-					}
-					
-					for(i=0;i<sendCounter;i++)
-						fprintf(file3, "%ld\t%ld\n", msbuf[0][i], msbuf[1][i]);
-					
-					mybuf_index = 0;
-					cout << "dupa1" <<  endl;
-					fclose(file2);
-					fclose(file3);
-					cout << "dupa1" <<  endl;
-				}
-				memcpy(mybuf+mybuf_index, buf, err*sizeof(sampleType));
-				mybuf_index += err;
-				sendCounter++;
 				//printf("read %d frames from input at ", err);
 				//t->printTime();
 				
@@ -960,6 +929,47 @@ void TransmitterAlsaCore::run()
 
 //	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 					//t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
+					
+					
+					
+					
+					
+									
+				msbuf[0][sendCounter] = mybuf_index;
+				msbuf[1][sendCounter] = t->getTimeMs();
+	
+				if (mybuf_index >= 50*1024) {
+					cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
+					FILE *file2 = fopen("danes.txt", "w");
+					FILE *file3 = fopen("timingis.txt", "w");
+					cout << "dupa1" <<  endl;
+					cout << "dupa1" <<  endl;
+					
+					long i=0;
+					while(i < 50*1024) {
+						fprintf(file2, "%ld\t%d\n", i, mybuf[i]);
+						i++;
+					}
+					
+					for(i=0;i<sendCounter;i++)
+						fprintf(file3, "%ld\t%ld\n", msbuf[0][i], msbuf[1][i]);
+					
+					mybuf_index = 0;
+					cout << "dupa1" <<  endl;
+					fclose(file2);
+					fclose(file3);
+					cout << "dupa1" <<  endl;
+				}
+				memcpy(mybuf+mybuf_index, (const unsigned char *)(outbuf + outbufcursor*periodsize), err*sizeof(sampleType));
+				mybuf_index += 160;
+
+				sendCounter++;
+					
+					
+					
+					
+					
+					
 					t->socket->setExpireTimeout(320 * 1000);
 					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 
