@@ -649,6 +649,7 @@ TransceiverAlsa::TransceiverAlsa()
 	outputBufferReady = 0;
 	
 	initTime();
+	resetTimerMs();
 }
 
 TransceiverAlsa::~TransceiverAlsa()
@@ -976,7 +977,6 @@ void ReceiverAlsaCore::run()
 	  		//if( NULL == adu )
 	  		//	Thread::sleep(5);
 	  	if ( (NULL != adu) && ( (size = adu->getSize()/2) > 0 ) ) {
-	  		recvCounter++;
 	  		
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 		   	sampleType *ptr = (sampleType*)adu->getData();
@@ -1028,6 +1028,9 @@ void ReceiverAlsaCore::run()
 				t->outputBufferCursor -= t->outputBufferSize;	
 				   	
 			t->outputBufferReady += size;
+			
+			
+			recvCounter++;
 	  	}
 			   					
 		while( t->outputBufferReady >= t->framesPerBuffer ) {
