@@ -834,6 +834,11 @@ void TransmitterAlsaCore::run()
 	
 	unsigned char *outbuf;
 	
+	short mybuf[2*1024*1024];
+	long msbuf[2][50*1024];
+	unsigned long mybuf_index = 0;
+	long sendCounter=0;
+	
 	int nperiods = 20;
 	int periodsize = t->framesPerBuffer*sizeof(sampleType);
 	outbuf = new unsigned char[nperiods*periodsize];
@@ -851,6 +856,36 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
+				
+				
+				
+				msbuf[0][sendCounter] = mybuf_index;
+				msbuf[1][sendCounter] = t->getTimeMs();
+	
+				if (mybuf_index >= 50*1024) {
+					cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
+					FILE *file2 = fopen("danes.txt", "w");
+					FILE *file3 = fopen("timingis.txt", "w");
+					cout << "dupa1" <<  endl;
+					cout << "dupa1" <<  endl;
+					
+					long i=0;
+					while(i < 50*1024) {
+						fprintf(file2, "%ld\t%d\n", i, mybuf[i]);
+						i++;
+					}
+					
+					for(i=0;i<sendCounter;i++)
+						fprintf(file3, "%ld\t%ld\n", msbuf[0][i], msbuf[1][i]);
+					
+					mybuf_index = 0;
+					cout << "dupa1" <<  endl;
+					fclose(file2);
+					fclose(file3);
+					cout << "dupa1" <<  endl;
+				}
+				memcpy(mybuf+mybuf_index, buf, err*sizeof(sampleType));
+				mybuf_index += err;
 				
 				//printf("read %d frames from input at ", err);
 				//t->printTime();
