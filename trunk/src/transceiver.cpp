@@ -26,6 +26,7 @@
 #include <ccrtp/rtp.h>
 #include <math.h>
 #include <cstdio>
+#include <sys/time.h>
 
 using namespace std;
 using namespace ost;
@@ -646,6 +647,8 @@ TransceiverAlsa::TransceiverAlsa()
 	outputBufferCursor = 0;
 	outputBufferCursor2 = 0;
 	outputBufferReady = 0;
+	
+	initTime();
 }
 
 TransceiverAlsa::~TransceiverAlsa()
@@ -823,7 +826,7 @@ void TransmitterAlsaCore::run()
 	TimerPort::setTimer(20);
 	
 	int packetCounter = 1;
-	int samples=128*t->sample_rate/8000;
+	int samples=160*t->sample_rate/8000; // <-----!!----->
 	//int size = samples*2;
 	
 	unsigned char buf[2048];
@@ -847,15 +850,19 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
+				
+				printf("read %d frames from input at ", err);
+				t->printTime();
+				
 				//  ---- !! ---
 			
-				for(int i=0;i<err;i++) {
+/*				for(int i=0;i<err;i++) {
 					((sampleType*)buf)[i] = (sampleType)((phase-1000));
 					phase++;
 					if(phase > 2000)
 						phase = 0;
 				}
-				//err	= 160;
+*/				//err	= 160;
 			
 				// ----- !! ----
 				
@@ -971,7 +978,7 @@ void ReceiverAlsaCore::run()
 		   	sampleType *ptr = (sampleType*)adu->getData();
 			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
 
-			if (mybuf_index >= 50*1024) {
+/*			if (mybuf_index >= 50*1024) {
 				cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
 				FILE *file = fopen("dupencja.dat", "w");
 				cout << "dupa1" <<  endl;
@@ -985,7 +992,7 @@ void ReceiverAlsaCore::run()
 			memcpy(mybuf+mybuf_index, ptr, 160*sizeof(sampleType));
 			mybuf_index += 160;
 			c_in = mybuf_index;
-			
+*/			
 			long toEnd = t->outputBufferSize - t->outputBufferCursor;
 			if(toEnd >= size ) {
 				for(long i=0;i<size;i++) *optr++ = *ptr++;
@@ -1018,8 +1025,12 @@ void ReceiverAlsaCore::run()
 			
 			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
 			if(err > 0) {
-				t->outputBufferReady -= err/2;
-				t->outputBufferCursor2 += err/2;
+				
+				printf("written %d frames to output at ", err);
+				t->printTime();
+				
+				t->outputBufferReady -= err;
+				t->outputBufferCursor2 += err;
 				if(t->outputBufferCursor2  >= t->outputBufferSize)
 					t->outputBufferCursor2 -= t->outputBufferSize;
 	  			
@@ -1028,8 +1039,8 @@ void ReceiverAlsaCore::run()
 //	  		 	TimerPort::incTimer(20);
 //	  			Thread::sleep(TimerPort::getTimer());
 			} else {
-				cout << "Couldn't write to the playback device. Tried to write " <<
-				t->framesPerBuffer*sizeof(sampleType) << " bytes of data." << endl;
+				//cout << "Couldn't write to the playback device. Tried to write " <<
+				//t->framesPerBuffer*sizeof(sampleType) << " bytes of data." << endl;
 				Thread::sleep(5);
 				break;
 			}
@@ -1209,7 +1220,10 @@ snd_pcm_t* TransceiverAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	int channels = 1;
 	int err;
 	int rate = 8000;
-	int periodsize = 320;
+	/*
+	 * TODO : [!!!!!] check if periodsize is in samples or in bytes if in samples it should be 160
+	 */
+	int periodsize = 160;
 	int periods = 8;
 	snd_pcm_format_t format = SND_PCM_FORMAT_S16;
 	
@@ -1342,6 +1356,18 @@ void TransceiverAlsa::alsa_fill_w(snd_pcm_t *pcm_handle)
 	buffer = alloca(buffer_size_bytes);
 	memset(buffer, 0, buffer_size_bytes);
 	snd_pcm_writei(pcm_handle, buffer, buffer_size);
+}
+
+void TransceiverAlsa::initTime() {
+	gettimeofday(&czas_start, NULL);
+}
+
+void TransceiverAlsa::printTime() {
+	struct timeval czas_teraz;
+	
+	gettimeofday(&czas_teraz, NULL);
+	
+	printf("%ld.%ld [s]\n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
 }
 
 
