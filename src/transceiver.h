@@ -334,7 +334,7 @@ private:
 	short *samples;
 	float *audioBuffer;
 	
-	
+	struct timeval czas_start;
 	
 	
 	long inputBufferSize;
@@ -372,6 +372,9 @@ public:
 	
 	int start();
 	int stop();
+	
+	void initTime();
+	void printTime();
 };
 
 } /* namespace agh */
