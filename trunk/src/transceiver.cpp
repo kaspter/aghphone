@@ -857,9 +857,9 @@ void TransmitterAlsaCore::run()
 				//  ---- !! ---
 			
 				for(int i=0;i<err;i++) {
-					((sampleType*)buf)[i] = (sampleType)((phase-10));
+					((sampleType*)buf)[i] = (sampleType)(sin((((double)phase/20.0)*3.1415926535897931))*16000.0);
 					phase++;
-					if(phase > 20)
+					if(phase > 40)
 						phase = 0;
 				}
 				//err	= 160;
@@ -964,7 +964,9 @@ void ReceiverAlsaCore::run()
 	
 	unsigned char buf[2048];
 	short mybuf[2*1024*1024];
+	long msbuf[2][2*1024*1024];
 	unsigned long mybuf_index = 0;
+	unsigned long recvCounter=0;
 	
 	while(1) {	
   		long size;
@@ -974,23 +976,42 @@ void ReceiverAlsaCore::run()
 	  		//if( NULL == adu )
 	  		//	Thread::sleep(5);
 	  	if ( (NULL != adu) && ( (size = adu->getSize()/2) > 0 ) ) {
+	  		recvCounter++;
+	  		
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 		   	sampleType *ptr = (sampleType*)adu->getData();
 			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
+			
+			msbuf[0][recvCounter] = mybuf_index;
+			msbuf[1][recvCounter] = t->getTimeMs();
 
 			if (mybuf_index >= 50*1024) {
 				cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
 				FILE *file = fopen("dupencja.dat", "w");
+				FILE *file2 = fopen("dane.txt", "w");
+				FILE *file3 = fopen("timingi.txt", "w");
 				cout << "dupa1" <<  endl;
 				cout << "dupa1" <<  endl;
 				fwrite(mybuf, sizeof(sampleType),  50*1024, file);
+				
+				long i=0;
+				while(i < 50*1024) {
+					fprintf(file2, "%ld\t%ld\n", i, mybuf[i]);
+					i++;
+				}
+				
+				for(i=0;i<recvCounter;i++)
+					fprintf(file3, "%ld\t%ld\n", msbuf[0][i], msbuf[1][i]);
+				
 				mybuf_index = 0;
 				cout << "dupa1" <<  endl;
 				fclose(file);
+				fclose(file2);
+				fclose(file3);
 				cout << "dupa1" <<  endl;
 			}
-			memcpy(mybuf+mybuf_index, ptr, 160*sizeof(sampleType));
-			mybuf_index += 160;
+			memcpy(mybuf+mybuf_index, ptr, size*sizeof(sampleType));
+			mybuf_index += size;
 			c_in = mybuf_index;
 			
 			long toEnd = t->outputBufferSize - t->outputBufferCursor;
@@ -1232,6 +1253,16 @@ void TransceiverAlsa::printTime() {
 	gettimeofday(&czas_teraz, NULL);
 	
 	printf("%3ld.%3ld [s]\n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
+}
+
+void TransceiverAlsa::resetTimerMs() {
+	gettimeofday(&startMs, NULL);
+}
+
+long TransceiverAlsa::getTimeMs() {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec - startMs.tv_sec)*1000 + tv.tv_usec/1000;
 }
 
 
