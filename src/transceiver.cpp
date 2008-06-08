@@ -826,7 +826,7 @@ void TransmitterAlsaCore::run()
 	TimerPort::setTimer(20);
 	
 	int packetCounter = 1;
-	int samples=160*t->sample_rate/8000; // <-----!!----->
+	int samples=t->framesPerBuffer*t->sample_rate/8000; // <-----!!----->
 	//int size = samples*2;
 	
 	unsigned char buf[2048];
@@ -834,11 +834,11 @@ void TransmitterAlsaCore::run()
 	unsigned char *outbuf;
 	
 	int nperiods = 20;
-	int periodsize = 160*sizeof(sampleType);
+	int periodsize = t->framesPerBuffer*sizeof(sampleType);
 	outbuf = new unsigned char[nperiods*periodsize];
 	int outbufcursor=0;
 	//uint32 timestamp = t->socket>getCurrentTimestamp() + 160*packetCounter;
-	uint32 timestamp = t->socket->getCurrentTimestamp() + 320;
+	uint32 timestamp = t->socket->getCurrentTimestamp() + sizeof(sampleType)*t->framesPerBuffer;
 	
 	int phase=0;
 	
@@ -856,13 +856,13 @@ void TransmitterAlsaCore::run()
 				
 				//  ---- !! ---
 			
-/*				for(int i=0;i<err;i++) {
+				for(int i=0;i<err;i++) {
 					((sampleType*)buf)[i] = (sampleType)((phase-1000));
 					phase++;
 					if(phase > 2000)
 						phase = 0;
 				}
-*/				//err	= 160;
+				//err	= 160;
 			
 				// ----- !! ----
 				
@@ -978,7 +978,7 @@ void ReceiverAlsaCore::run()
 		   	sampleType *ptr = (sampleType*)adu->getData();
 			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
 
-/*			if (mybuf_index >= 50*1024) {
+			if (mybuf_index >= 50*1024) {
 				cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" << endl;
 				FILE *file = fopen("dupencja.dat", "w");
 				cout << "dupa1" <<  endl;
@@ -992,7 +992,7 @@ void ReceiverAlsaCore::run()
 			memcpy(mybuf+mybuf_index, ptr, 160*sizeof(sampleType));
 			mybuf_index += 160;
 			c_in = mybuf_index;
-*/			
+			
 			long toEnd = t->outputBufferSize - t->outputBufferCursor;
 			if(toEnd >= size ) {
 				for(long i=0;i<size;i++) *optr++ = *ptr++;
@@ -1048,143 +1048,7 @@ void ReceiverAlsaCore::run()
 		readyOnOutput = t->outputBufferReady;
     }
 }
-/* // TWO STREAMS
-void TransceiverAlsa::openStream()
-{
-	int err;
-	snd_pcm_info_t *info_in, *info_out;
-	snd_output_t *log;
-	
-	snd_output_stdio_attach(&log, stderr, 0);
-	
-	// output stream
-	
-	snd_pcm_hw_params_t *hw_params;
-	
-	err = snd_pcm_open(&playback_handle, "default" , SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
-	snd_pcm_info_alloca(&info_out);
-	err = snd_pcm_info(playback_handle, info_out);
-	if(err < 0) cout << "Alsa error: cannot get info on playback device : " << snd_strerror(err) << endl;
-	else {
 
-	}
-	
-	err = snd_pcm_hw_params_malloc(&hw_params);
-	if(err < 0) cout << "Alsa error: cannot allocate hw params structure : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_any(playback_handle, hw_params);
-	if(err < 0) cout << "Alsa error: cannot initialize hw params structure : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_access(playback_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-	if(err < 0) cout << "Alsa error: cannot set access type : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_format(playback_handle, hw_params, SND_PCM_FORMAT_S16_LE);
-	if(err < 0) cout << "Alsa error: cannot set sample format : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_channels(playback_handle, hw_params, 1);
-	if(err < 0) cout << "Alsa error: cannot set channel count : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_rate(playback_handle, hw_params, sample_rate, 0);
-	if(err < 0) cout << "Alsa error: cannot sample rate : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params(playback_handle, hw_params);
-	if(err < 0) cout << "Alsa error: cannot hw parameters : " << snd_strerror(err) << endl;
-	
-	cout << "Playback device:" << endl;
-	snd_pcm_hw_params_dump(hw_params, log);
-	
-	snd_pcm_hw_params_free(hw_params);
-	
-	snd_pcm_sw_params_t *sw_params_out;
-	
-	err = snd_pcm_sw_params_malloc(&sw_params_out);
-	if(err < 0) cout << "Alsa error: cannot allocate sw params structure : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params_current(playback_handle, sw_params_out);
-	if(err < 0) cout << "Alsa error: cannot init sw params structure : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params_set_avail_min(playback_handle, sw_params_out, frame_size);
-	if(err < 0) cout << "Alsa error: cannot set avail min : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params(playback_handle, sw_params_out);
-	if(err < 0) cout << "Alsa error: cannot set parameters : " << snd_strerror(err) << endl;
-	err = snd_pcm_prepare(playback_handle);
-	if(err < 0) cout << "Alsa error: cannot prepare audio interface for use : " << snd_strerror(err) << endl;
-	
-	snd_pcm_sw_params_dump(sw_params_out, log);
-	
-	snd_pcm_dump(playback_handle, log);
-	
-	// input stream
-	
-	err = snd_pcm_open(&capture_handle, "default" , SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	if(err < 0) cout << "Alsa error: cannot open device for playback : " << snd_strerror(err) << endl;
-	
-	snd_pcm_info_alloca(&info_in);
-	err = snd_pcm_info(capture_handle, info_in);
-	if(err < 0) cout << "Alsa error: cannot get info on capture device : " << snd_strerror(err) << endl;
-	else {
-		cout << "Capture device:" << endl << 
-		"\tdevice:" << snd_pcm_info_get_device(info_in) << endl <<
-		"\tsubdevice:" << snd_pcm_info_get_subdevice(info_in) << endl <<
-		"\tcard:" << snd_pcm_info_get_card(info_in) << endl <<
-		"\tid:" << snd_pcm_info_get_id(info_in) << endl <<
-		"\tname:" << snd_pcm_info_get_name(info_in) << endl <<
-		"\tsubdevice_name:" << snd_pcm_info_get_subdevice_name(info_in) << endl;
-	}
-	
-	err = snd_pcm_nonblock(capture_handle, 1);
-	if(err < 0) cout << "Alsa error: cannot set nonblocking on capture device : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_malloc(&hw_params);
-	if(err < 0) cout << "Alsa error: cannot allocate params structure : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_any(capture_handle, hw_params);
-	if(err < 0) cout << "Alsa error: cannot initialize params : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_access(capture_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-	if(err < 0) cout << "Alsa error: cannot set access on capture device : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_format(capture_handle, hw_params, SND_PCM_FORMAT_S16_LE);
-	if(err < 0) cout << "Alsa error: cannot set format : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 1);
-	if(err < 0) cout << "Alsa error: cannot set channel count : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params_set_rate(capture_handle, hw_params, sample_rate, 0);
-	if(err < 0) cout << "Alsa error: cannot set sample rate : " << snd_strerror(err) << endl;
-	snd_pcm_uframes_t bufsize = 1024;
-	switch(sample_rate) {
-		case 8000:
-			bufsize >>= 2;
-			break;
-		case 16000:
-			bufsize >>= 1;
-			break;
-		case 32000:
-			bufsize = 1024;
-			break;
-		default:
-			cout << "Frame rate " << sample_rate << " not supported" << endl;
-	}
-	err = snd_pcm_hw_params_set_buffer_size_near(capture_handle, hw_params, &bufsize);
-	if(err < 0) cout << "Alsa error: cannot set buffer size near : " << snd_strerror(err) << endl;
-	err = snd_pcm_hw_params(capture_handle, hw_params);
-	if(err < 0) cout << "Alsa error: cannot set hw params : " << snd_strerror(err) << endl;
-	
-	cout << endl << endl << "Capture device" << endl;
-	snd_pcm_hw_params_dump(hw_params, log);
-	
-	snd_pcm_hw_params_free(hw_params);
-	
-	snd_pcm_sw_params_t *sw_params_in;
-
-	err = snd_pcm_sw_params_malloc(&sw_params_in);
-	if(err < 0) cout << "Alsa error: cannot allocate sw params for capture device : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params_current(capture_handle, sw_params_in);
-	if(err < 0) cout << "Alsa error: cannot initialize params : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params_set_avail_min(capture_handle, sw_params_in, bufsize/2);
-	if(err < 0) cout << "Alsa error: cannot set avail mi : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params_set_stop_threshold(capture_handle, sw_params_in, bufsize*4);
-	if(err < 0) cout << "Alsa error: cannot set stop threshold : " << snd_strerror(err) << endl;
-	err = snd_pcm_sw_params(capture_handle, sw_params_in);
-	if(err < 0) cout << "Alsa error: cannot set sw params : " << snd_strerror(err) << endl;
-	err = snd_pcm_prepare(capture_handle);
-	if(err < 0) cout << "Alsa error: cannot prepare capture device : " << snd_strerror(err) << endl;
-	
-	snd_pcm_sw_params_dump(sw_params_in, log);
-	
-	snd_pcm_dump(capture_handle, log);
-} 
-*/
-
-// ONE STREAM
 void TransceiverAlsa::openStream()
 {
 	int err;
@@ -1367,7 +1231,7 @@ void TransceiverAlsa::printTime() {
 	
 	gettimeofday(&czas_teraz, NULL);
 	
-	printf("%ld.%ld [s]\n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
+	printf("%3ld.%3ld [s]\n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
 }
 
 
