@@ -839,9 +839,9 @@ void TransmitterAlsaCore::run()
 //	unsigned long mybuf_index = 0;
 //	long sendCounter=0;
 	
-	int nperiods = 20;
+	int nperiods = 200;
 	int periodsize = t->framesPerBuffer*sizeof(sampleType);
-	outbuf = new unsigned char[nperiods*periodsize];
+	outbuf = new unsigned char[(nperiods+2)*periodsize];
 	int outbufcursor=0;
 	//uint32 timestamp = t->socket>getCurrentTimestamp() + 160*packetCounter;
 	uint32 timestamp = t->socket->getCurrentTimestamp() + sizeof(sampleType)*t->framesPerBuffer;
