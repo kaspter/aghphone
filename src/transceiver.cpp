@@ -913,7 +913,7 @@ void TransmitterAlsaCore::run()
 		}	   	
 			   	
 			   	
-		if( t->inputBufferReady >= 160 ) {
+		if( t->inputBufferReady >= 160*4 ) {
 			sampleType *ptr1 = t->inputBuffer + t->inputBufferCursor2;
 			sampleType *ptr2 = (sampleType*)(outbuf + outbufcursor*periodsize);
 			
@@ -1048,7 +1048,7 @@ void ReceiverAlsaCore::run()
 			t->outputBufferReady += size;
 	  	}
 			   					
-		while( t->outputBufferReady >= t->framesPerBuffer ) {
+		if( t->outputBufferReady >= t->framesPerBuffer*4 ) {
 			sampleType *ptr1 = t->outputBuffer + t->outputBufferCursor2;
 			sampleType *ptr2 = (sampleType*)buf;
 					
