@@ -848,7 +848,9 @@ void TransmitterAlsaCore::run()
 	
 	int phase=0;
 	
+#ifndef NO_LOGS
 	FILE *logHandle = fopen("logs.txt", "w");
+#endif
 	
 	while(1) {
 		if(t->alsa_can_read(t->capture_handle, samples)) {
@@ -858,7 +860,9 @@ void TransmitterAlsaCore::run()
 			if(err <= 0) {
 				cout << "Failed to read samples from capture device " << snd_strerror(err) << endl;
 			} else {
+#ifndef NO_LOGS
 				fprintf(logHandle, "%ld [s]: %d bytes read from input\n", t->getTimeMs(), err);
+#endif
 				//printf("read %d frames from input at ", err);
 				//t->printTime();
 				
@@ -938,13 +942,14 @@ void TransmitterAlsaCore::run()
 					t->socket->setExpireTimeout(320 * 1000);
 					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 
+#ifndef NO_LOGS
 					fprintf(logHandle, "%ld [s]: %d bytes sent to the socket, packetCounter:%d, timestamp:%ld\n", t->getTimeMs(), 160*sizeof(sampleType), packetCounter, (long)timestamp);
 					
 					if(timestamp > 250*160) {
 						fclose(logHandle);
 						logHandle = fopen("logs1.txt", "w");
 					}
-
+#endif
 	  				packetCounter++;
 					timestamp += 160;
 	  				//c_in = outbufcursor;
@@ -985,9 +990,9 @@ void ReceiverAlsaCore::run()
 //	long msbuf[2][50*1024];
 //	unsigned long mybuf_index = 0;
 	long recvCounter=0;
-	
+#ifndef NO_LOGS	
 	FILE *logHandle = fopen("logsrecv.txt", "w");
-	
+#endif	
 	while(1) {	
   		long size;
 	  	const AppDataUnit* adu;
@@ -996,7 +1001,9 @@ void ReceiverAlsaCore::run()
 	  		//if( NULL == adu )
 	  		//	Thread::sleep(5);
 	  	if ( (NULL != adu) && ( (size = adu->getSize()/2) > 0 ) ) {
+#ifndef NO_LOGS
 	  		fprintf(logHandle, "%ld [s]: %ld frames read from socket\n", t->getTimeMs(), size);
+#endif
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 		   	sampleType *ptr = (sampleType*)adu->getData();
 			sampleType *optr = t->outputBuffer + t->outputBufferCursor;
@@ -1035,12 +1042,14 @@ void ReceiverAlsaCore::run()
 			int err = t->alsa_write(t->playback_handle,  buf, t->framesPerBuffer);
 			//int err = 160;
 			if(err > 0) {
+#ifndef NO_LOGS
 				fprintf(logHandle, "%ld [s]: %d frames written to the output\n", t->getTimeMs(), err);
 				recvCounter++;
 				if(recvCounter > 250) {
 					fclose(logHandle);
 					logHandle = fopen("logsrecv1.txt", "w");
 				}
+#endif
 //				printf("written %d frames to output at ", err);
 //				t->printTime();
 				
