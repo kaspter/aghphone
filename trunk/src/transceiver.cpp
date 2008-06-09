@@ -852,6 +852,17 @@ void TransmitterAlsaCore::run()
 	FILE *logHandle = fopen("logs.txt", "w");
 #endif
 	
+	
+	// initialize input buffer with some silence
+	
+	int ninit = 5;
+	for(int i=0;i<160*ninit;i++) {
+		t->inputBuffer[i] = 0;
+	}
+	t->inputBufferCursor = 160*ninit;
+	t->inputBufferReady = 160*ninit;
+	
+	
 	while(1) {
 		if(t->alsa_can_read(t->capture_handle, samples)) {
 			
@@ -898,29 +909,30 @@ void TransmitterAlsaCore::run()
 			   		t->inputBufferCursor -= t->inputBufferSize;	
 			   	
 			   	t->inputBufferReady += err;
+			}
+		}	   	
 			   	
 			   	
-			   	
-				if( t->inputBufferReady >= 160 ) {
-					sampleType *ptr1 = t->inputBuffer + t->inputBufferCursor2;
-					sampleType *ptr2 = (sampleType*)(outbuf + outbufcursor*periodsize);
-					
-					long toEnd2 = t->inputBufferSize - t->inputBufferCursor2;
-					
-					if(toEnd2 >= 160) {
-						for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
-					} else {
-						for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
-						ptr1 = t->inputBuffer;
-						for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
-					}
-					
-					t->inputBufferCursor2 += 160;
-					if(t->inputBufferCursor2 >= t->inputBufferSize)
-						t->inputBufferCursor2 -= t->inputBufferSize;
-						
-					t->inputBufferReady -= 160;
-					
+		if( t->inputBufferReady >= 160 ) {
+			sampleType *ptr1 = t->inputBuffer + t->inputBufferCursor2;
+			sampleType *ptr2 = (sampleType*)(outbuf + outbufcursor*periodsize);
+			
+			long toEnd2 = t->inputBufferSize - t->inputBufferCursor2;
+			
+			if(toEnd2 >= 160) {
+				for(int i=0;i<160;i++) *ptr2++ = *ptr1++;
+			} else {
+				for(int i=0;i<toEnd2;i++) *ptr2++ = *ptr1++;
+				ptr1 = t->inputBuffer;
+				for(int i=0;i<160-toEnd2;i++) *ptr2++ = *ptr1++;
+			}
+			
+			t->inputBufferCursor2 += 160;
+			if(t->inputBufferCursor2 >= t->inputBufferSize)
+				t->inputBufferCursor2 -= t->inputBufferSize;
+				
+			t->inputBufferReady -= 160;
+			
 /*					// ------ !! ----
 					sampleType *ptr3=(sampleType*)(outbuf+outbufcursor*periodsize);
 					for(int i=0;i<160;i++) {
@@ -937,35 +949,33 @@ void TransmitterAlsaCore::run()
 */					
 
 //	  				t->socket->sendImmediate(160*sizeof(sampleType)*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
-					//t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
+			//t->socket->putData(160*16*packetCounter,(const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 					
 					t->socket->setExpireTimeout(320 * 1000);
 					t->socket->putData(timestamp, (const unsigned char *)(outbuf + outbufcursor*periodsize), 160*sizeof(sampleType));
 
 #ifndef NO_LOGS
 					fprintf(logHandle, "%ld [s]: %d bytes sent to the socket, packetCounter:%d, timestamp:%ld\n", t->getTimeMs(), 160*sizeof(sampleType), packetCounter, (long)timestamp);
-					
-					if(timestamp > 250*160) {
-						fclose(logHandle);
-						logHandle = fopen("logs1.txt", "w");
+			
+			if(timestamp > 250*160) {
+				fclose(logHandle);
+				logHandle = fopen("logs1.txt", "w");
 					}
 #endif
 	  				packetCounter++;
 					timestamp += 160;
 	  				//c_in = outbufcursor;
-	  				
-	  				outbufcursor++;
-	  				if(outbufcursor >= nperiods)
-	  					outbufcursor = 0;
-	  				
-			  		TimerPort::incTimer(20);
-	  				Thread::sleep(TimerPort::getTimer());
-				}
-				
-				readyOnInput = t->inputBufferReady;
-			}
+			
+			outbufcursor++;
+			if(outbufcursor >= nperiods)
+				outbufcursor = 0;
+			
+	  		TimerPort::incTimer(20);
+			Thread::sleep(TimerPort::getTimer());
 		}
-    }
+		
+		readyOnInput = t->inputBufferReady;
+	}
 }
 
 ReceiverAlsaCore::ReceiverAlsaCore(TransceiverAlsa* tpa)
@@ -993,6 +1003,19 @@ void ReceiverAlsaCore::run()
 #ifndef NO_LOGS	
 	FILE *logHandle = fopen("logsrecv.txt", "w");
 #endif	
+
+
+
+	// initialize output buffer with some silence
+	int ninit = 5;
+	
+	for(int i=0;i<160*ninit;i++) {
+		t->outputBuffer[i] = 0;
+	}
+	t->outputBufferCursor = 160*ninit;
+	t->outputBufferReady = 160*ninit;
+
+
 	while(1) {	
   		long size;
 	  	const AppDataUnit* adu;
@@ -1065,7 +1088,9 @@ void ReceiverAlsaCore::run()
 			} else {
 				//cout << "Couldn't write to the playback device. Tried to write " <<
 				//t->framesPerBuffer*sizeof(sampleType) << " bytes of data." << endl;
+#ifndef NO_LOGS
 				fprintf(logHandle, "%ld [s]: couldn't write to the output\n", t->getTimeMs());
+#endif
 				Thread::sleep(5);
 				break;
 			}
