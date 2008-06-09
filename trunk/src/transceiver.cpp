@@ -863,6 +863,8 @@ void TransmitterAlsaCore::run()
 				//t->printTime();
 				
 				//  ---- !! ---
+				
+				c_in++;
 			
 				for(int i=0;i<err;i++) {
 					((sampleType*)buf)[i] = (sampleType)(sin((((double)phase/20.0)*3.1415926535897931))*16000.0);
@@ -945,7 +947,7 @@ void TransmitterAlsaCore::run()
 
 	  				packetCounter++;
 					timestamp += 160;
-	  				c_in = outbufcursor;
+	  				//c_in = outbufcursor;
 	  				
 	  				outbufcursor++;
 	  				if(outbufcursor >= nperiods)
@@ -1054,6 +1056,7 @@ void ReceiverAlsaCore::run()
 			} else {
 				//cout << "Couldn't write to the playback device. Tried to write " <<
 				//t->framesPerBuffer*sizeof(sampleType) << " bytes of data." << endl;
+				fprintf(logHandle, "%ld [s]: couldn't write to the output\n", t->getTimeMs());
 				Thread::sleep(5);
 				break;
 			}
