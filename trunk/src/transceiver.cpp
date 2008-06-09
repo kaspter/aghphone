@@ -881,13 +881,13 @@ void TransmitterAlsaCore::run()
 				
 				c_in++;
 			
-				for(int i=0;i<err;i++) {
+/*				for(int i=0;i<err;i++) {
 					((sampleType*)buf)[i] = (sampleType)(sin((((double)phase/20.0)*3.1415926535897931))*16000.0);
 					phase++;
 					if(phase > 40)
 						phase = 0;
 				}
-				//err	= 160;
+*/				//err	= 160;
 			
 				// ----- !! ----
 				
