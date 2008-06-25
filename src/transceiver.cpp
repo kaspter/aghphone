@@ -910,7 +910,7 @@ void TransmitterAlsaCore::run()
 			   	
 			   	t->inputBufferReady += err;
 			}
-		}	   	
+		}   	
 			   	
 			   	
 		if( t->inputBufferReady >= 160*4 ) {
@@ -975,6 +975,8 @@ void TransmitterAlsaCore::run()
 		}
 		
 		readyOnInput = t->inputBufferReady;
+		
+		Thread::sleep(5);
 	}
 }
 
@@ -1103,10 +1105,12 @@ void ReceiverAlsaCore::run()
 	  			c_out++;
 	  			
 				//printf("!!!!!!!!!!!!!!! %s\n", snd_strerror(err)); 
-				//Thread::sleep(5);
+				Thread::sleep(5);
 			}
 		}
 		readyOnOutput = t->outputBufferReady;
+		
+		Thread::sleep(5);
     }
 }
 
