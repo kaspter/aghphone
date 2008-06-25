@@ -1025,7 +1025,7 @@ void ReceiverAlsaCore::run()
 	  		//	Thread::sleep(5);
 	  	if ( (NULL != adu) && ( (size = adu->getSize()/2) > 0 ) ) {
 #ifndef NO_LOGS
-	  		fprintf(logHandle, "%ld [s]: %ld frames read from socket\n", t->getTimeMs(), size);
+	  		fprintf(logHandle, "%ld [ms]: %ld frames read from socket\n", t->getTimeMs(), size);
 #endif
 //	    cout << "recvd packet of size " << size << " ready:" << t->outputBufferReady << endl;
 		   	sampleType *ptr = (sampleType*)adu->getData();
@@ -1066,11 +1066,12 @@ void ReceiverAlsaCore::run()
 			//int err = 160;
 			if(err > 0) {
 #ifndef NO_LOGS
-				fprintf(logHandle, "%ld [s]: %d frames written to the output\n", t->getTimeMs(), err);
+				fprintf(logHandle, "%ld [ms]: %d frames written to the output\n", t->getTimeMs(), err);
 				recvCounter++;
-				if(recvCounter > 250) {
-					fclose(logHandle);
-					logHandle = fopen("logsrecv1.txt", "w");
+				if(recvCounter % 250) {
+					fflush(logHandle);
+					//fclose(logHandle);
+					//logHandle = fopen("logsrecv1.txt", "w");
 				}
 #endif
 //				printf("written %d frames to output at ", err);
@@ -1081,7 +1082,7 @@ void ReceiverAlsaCore::run()
 				if(t->outputBufferCursor2  >= t->outputBufferSize)
 					t->outputBufferCursor2 -= t->outputBufferSize;
 	  			
-	  			c_out++;
+	  			c_out++;				
 	  				 	
 //	  		 	TimerPort::incTimer(20);
 //	  			Thread::sleep(TimerPort::getTimer());
@@ -1091,8 +1092,18 @@ void ReceiverAlsaCore::run()
 #ifndef NO_LOGS
 				fprintf(logHandle, "%ld [s]: couldn't write to the output\n", t->getTimeMs());
 #endif
-				Thread::sleep(5);
-				break;
+				fprintf(logHandle, "%ld [ms]: omitting packet\n", t->getTimeMs());
+				
+				t->outputBufferReady -= 160;
+				t->outputBufferCursor2 += 160;
+				
+				if(t->outputBufferCursor2  >= t->outputBufferSize)
+					t->outputBufferCursor2 -= t->outputBufferSize;
+	  			
+	  			c_out++;
+	  			
+				//printf("!!!!!!!!!!!!!!! %s\n", snd_strerror(err)); 
+				//Thread::sleep(5);
 			}
 		}
 		readyOnOutput = t->outputBufferReady;
