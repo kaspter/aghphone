@@ -13,7 +13,8 @@ bin_dir := ../bin
 CXX := g++
 CXXFLAGS = -Wall -ansi -pedantic -g -I. -D__UNIX $(addprefix -I ,$(include_dirs))
 LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1
-SLICE := slice2cpp
+SLICEFLAGS = -I /usr/share/Ice/slice/
+SLICE := slice2cpp ${SLICEFLAGS}
 vpath %.h $(include_dirs)
 
 MV := mv -f
@@ -35,7 +36,7 @@ include transceiver/module.mk
 include common/codecs/module.mk
 
 .PHONY: all
-all: ice/iface.o $(programs)
+all: ice/icecommon.o ice/iface.o  $(programs)
 
 .PHONY: libraries
 libraries: $(libraries)
