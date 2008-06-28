@@ -427,58 +427,5 @@ int Terminal::remoteStartTransmission(const Ice::Current& cur) {
 
 } /* namespace agh */
 
-int main(int argc, char *argv[]) {
-/*	
-//	try {
-		// Set up a simple configuration that logs on the console.
-		BasicConfigurator::configure();
-//	} catch(log4cxx::helpers::Exception& e) {
-//		clog << e.what() << endl;
-//	}
 
-	int port;
-
-	cout << audioCodecChannels[AudioCodec::L16_STEREO] << endl;
-	cout << audioCodecChannels[AudioCodec::MPA] << endl;
-
-	cout << audioCodecClockRate[AudioCodec::DVI4_22050] << endl;
-	cout << audioCodecClockRate[AudioCodec::MPA] << endl;
-
-	if (argc > 1) {
-		// slave test
-		port = 8347;
-	} else {
-		// master test
-		port = 8348;
-	}
-	Terminal *app = new Terminal(port); 
-
-	if (argc > 1) {
-		app->connect("localhost", 8348);
-		app->startTransmission();
-	} else {
-
-	}
-
-	LOG4CXX_DEBUG(logger, "Ala ma kota");
-
-	sleep(6000);
-	*/
-
-	TransceiverAlsa *itr = new TransceiverAlsa();
-	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
-	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
-	
-	if(argc >= 6)
-		itr->setInputDevice(argv[5]);
-	if(argc >= 7)
-		itr->setOutputDevice(argv[6]);
-		
-	itr->start();
-	
-	cout << "Press any key to exit..." << endl;
-	cin.get();
-	
-	delete itr;
-}
 
