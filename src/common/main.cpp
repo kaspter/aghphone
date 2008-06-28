@@ -32,27 +32,51 @@
 #include "restypes.h"
 #include "globals.h"
 #include "tools.h"
-#include "transceiver.h"
+#include "terminal.h"
 
 using namespace std;
 using namespace agh;
+using namespace log4cxx;
 
 int main(int argc, char *argv[]) {
 
+	try {
+		// Set up a simple configuration that logs on the console.
+		BasicConfigurator::configure();
+	} catch(log4cxx::helpers::Exception& e) {
+		clog << e.what() << endl;
+	}
 
-	TransceiverAlsa *itr = new TransceiverAlsa();
-	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
-	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
-	
-	if(argc >= 6)
-		itr->setInputDevice(argv[5]);
-	if(argc >= 7)
-		itr->setOutputDevice(argv[6]);
-		
-	itr->start();
-	
-	cout << "Press any key to exit..." << endl;
-	cin.get();
-	
-	delete itr;
+	Terminal *term;
+
+	if (argc > 1) {
+		term = new Terminal(3000, 4000);
+	} else {
+		term = new Terminal(4000, 3000);
+		term->connect("127.0.0.1", 3000);
+	}
+	int g;
+	cin >> g;
 }
+
+/*
+ int main(int argc, char *argv[]) {
+
+
+ TransceiverAlsa *itr = new TransceiverAlsa();
+ itr->setLocalEndpoint(argv[1], atoi(argv[2]));
+ itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
+ 
+ if(argc >= 6)
+ itr->setInputDevice(argv[5]);
+ if(argc >= 7)
+ itr->setOutputDevice(argv[6]);
+ 
+ itr->start();
+ 
+ cout << "Press any key to exit..." << endl;
+ cin.get();
+ 
+ delete itr;
+ }
+ */
