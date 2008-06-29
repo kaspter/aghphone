@@ -207,6 +207,7 @@ int Terminal::startTransmission() {
 		transceiver->setCodec(-1); //dummycodec
 		transceiver->setLocalEndpoint(*localAddr, localRTPPort);
 		transceiver->setRemoteEndpoint(*remoteAddr, remoteRTPPort);
+		transceiver->start();
 
 		//int res = 0;
 		stringstream a;
@@ -220,9 +221,6 @@ int Terminal::startTransmission() {
 			LOG4CXX_ERROR(logger, "Cannot start transmission");
 			return res;
 		}
-
-		LOG4CXX_DEBUG(logger, "Remote transmission requesting");
-		remoteTerminal->remoteStartTransmission();
 
 		//TODO: change error mechanism
 /*		if (res != 0) {
@@ -333,9 +331,10 @@ void Terminal::onACK(const ::agh::CallParametersResponse& param) {
 		LOG4CXX_DEBUG(logger, a.str());
 
 		// perform connection
+		this->startTransmission();
 		remoteTerminal->remoteStartTransmission();
 		LOG4CXX_DEBUG(logger, string("Terminal::onACK() starting transmission"));
-		// 		this->startTransmission();
+		// 		
 
 		cout << "Before change state\n";
 		changeState(States::ACTIVE_OPERATIONAL);
