@@ -26,8 +26,6 @@
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/helpers/exception.h>
-#include <cstdio>
-
 
 #include <iface.h>
 #include "master.h"
@@ -36,9 +34,6 @@
 #include "tools.h"
 #include "terminal.h"
 #include "dummyui.h"
-#include "g711.h"
-
-
 
 using namespace std;
 using namespace agh;
@@ -52,28 +47,9 @@ int main(int argc, char *argv[]) {
 	} catch(log4cxx::helpers::Exception& e) {
 		//clog << e.what() << endl;
 	}
-
-	FILE *in = fopen(argv[1], "r+");
-	FILE *out = fopen(argv[2], "w+");
 	
-	G711u codec;
-	
-	char *inbuf = new char[320];
-	char *outbuf = new char[320];
-	
-	while (!feof(in)) {
-		
-		fread(inbuf, 160, 1, in);
-		codec.decode(outbuf, inbuf, 160);
-		fwrite(outbuf, 320, 1, out);
-	}
-	
-	fclose(in);
-	fclose(out);
-	
-/*	int portL = atoi(argv[1]);
+	int portL = atoi(argv[1]);
 	int portR = atoi(argv[2]);
 	
 	DummyUI *dummy = new DummyUI(portL, portR);
-*/
- }
+}
