@@ -4,6 +4,8 @@
 // #include <cc++/address.h>
 // #include "terminal.h"
 
+#include "transceiver.h"
+#include "transceiverfactory.h"
 #include "dummyui.h"
 
 using namespace std;
@@ -23,6 +25,7 @@ class WorkerThread : public Thread {
 
 WorkerThread::WorkerThread(Terminal* terminal) {
 	this->terminal = terminal;
+	
 }
 
 void WorkerThread::run() {
@@ -43,6 +46,11 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 	this->rIcePort = rIcePort;
 	terminal = new Terminal(lIcePort);
 	terminal->registerCallback(this);
+	
+	TransceiverFactory factory;
+	Transceiver* transceiver = factory.getTransceiver("alsa", "ccrtp");
+	
+	terminal->setTransceiver(transceiver);
 	
 	int key;
 	while(1) {
