@@ -62,8 +62,11 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 				int tmpPort;
 				cout << "local port: ";
 				cin >> tmpPort;
+				string address;
+				cout << "host address: ";
+				cin >> address;
 				terminal->setLocalRtpPort(tmpPort);
-				terminal->connect("127.0.0.1", remotePort);
+				terminal->connect(address, remotePort);
 				cout << "done\n";
 				break;
 			}
