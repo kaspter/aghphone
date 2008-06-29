@@ -27,6 +27,7 @@
 #include "master.h"
 #include "icecommon.h"
 #include <cc++/address.h>
+#include "directory.h"
 #include "terminal.h"
 
 using namespace std;
@@ -37,11 +38,15 @@ namespace agh {
 	class DummyUI : public IUICallback {
 	
 		Terminal* terminal;
+		DirectoryPrx directory;	
+		int lIcePort;
+		int rIcePort;
 		
 		public:
 	
 		virtual bool onStateTransition(int prevState, int curState, const IPV4Address& addr);
 		DummyUI(int lIcePort, int rIcePort);
+		void findDirectory(string port, string name);
 	};
 
 
