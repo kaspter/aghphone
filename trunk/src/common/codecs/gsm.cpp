@@ -18,26 +18,45 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef __CODECFACTORY_H__INCLUDED__
-#define __CODECFACTORY_H__INCLUDED__
-
-#include <map>
-#include "codec.h"
-
-using namespace std;
+extern "C" {
+#include <gsm/gsm.h>
+}
+#include "gsm.h"
 
 namespace agh {
 
-class CodecFactory {
-	map<int, Codec*> instanceMap;
-public:
-	CodecFactory();
-	~CodecFactory();
-	
-	Codec *getCodec(int id);
-};
+GSM::GSM() {
+	r = ::gsm_create();
+}
 
-} /* namespace agh */
+GSM::~GSM() {
+	::gsm_destroy(r);
+}
 
-#endif /* __CODECFACTORY_H__INCLUDED__ */
+int GSM::getDelay() {
+	return 20;
+}
+
+int GSM::getFrameCount() {
+	return 160;
+}
+
+int GSM::getFrameSize() {
+	return 2;
+}
+
+float GSM::getFrequency() {
+	return 8000.0f;
+}
+
+int GSM::encode(char *dest, char *src) {
+	::gsm_encode(r, (::gsm_signal *) src, (::gsm_byte *) dest);
+	return 33;
+}
+
+int GSM::decode(char *dest, char *src, int srcsize) {
+	::gsm_decode(r, (::gsm_byte *) src, (::gsm_signal *) dest);
+	return getFrameCount();
+}
+
+}

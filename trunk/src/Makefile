@@ -11,9 +11,10 @@ bin_dir := ../bin
 
 CXX := g++
 CC := gcc
+AR := ar
 CFLAGS = -Wall -ansi -pedantic -g -I. $(addprefix -I ,$(include_dirs))
 CXXFLAGS = -Wall -ansi -pedantic -g -I. -D__UNIX $(addprefix -I ,$(include_dirs))
-LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1
+LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1 -lgsm
 SLICEFLAGS = -I ${ICE_HOME}/slice/
 SLICE := slice2cpp ${SLICEFLAGS}
 vpath %.h $(include_dirs)
@@ -24,6 +25,7 @@ SED := sed
 
 ECHO_COMPILE_EXEC = @echo -e "\n\033[01;32m***********************************\n* Compiling $(@) executable\n***********************************\033[0m"
 ECHO_COMPILE = @echo -e "\n\033[01;32m* Compiling $(?)\n\033[0m"
+ECHO_AR = @echo -e "\n\033[01;32m* Generating archive $(@)\n\033[0m"
 ECHO_ICE = @echo -e "\n\033[01;32m* Generating ICE stubs $(?)\n\033[0m"
 ECHO_CLEAN = @echo -e "\n\033[01;32m***********************************\n* Cleaning all targets\n***********************************\033[0m"
 
@@ -41,6 +43,7 @@ include common/codecs/module.mk
 include gui/module.mk
 include mixer/module.mk
 include common/codecs/legacy/g711/module.mk
+include common/codecs/legacy/ilbc/module.mk
 
 .PHONY: all
 all: ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)

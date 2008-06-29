@@ -19,25 +19,28 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CODECFACTORY_H__INCLUDED__
-#define __CODECFACTORY_H__INCLUDED__
+#ifndef __GSM_H__INCLUDED__
+#define __GSM_H__INCLUDED__
 
-#include <map>
 #include "codec.h"
-
-using namespace std;
+#include <gsm/gsm.h>
 
 namespace agh {
 
-class CodecFactory {
-	map<int, Codec*> instanceMap;
-public:
-	CodecFactory();
-	~CodecFactory();
+class GSM : public Codec {
+protected:
+	::gsm r;
 	
-	Codec *getCodec(int id);
+public:
+	GSM();
+	~GSM();
+	int getDelay();
+	int getFrameCount();
+	int getFrameSize();
+	float getFrequency();
+	int encode(char *dest, char *src);
+	int decode(char *dest, char *src, int srcsize);
 };
 
-} /* namespace agh */
-
-#endif /* __CODECFACTORY_H__INCLUDED__ */
+}
+#endif /* __GSM_H__INCLUDED__ */

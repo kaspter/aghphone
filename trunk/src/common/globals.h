@@ -48,13 +48,14 @@ struct AudioCodec {
 		DVI4_11025,
 		DVI4_22050,
 		G729,
-		RESERVED3
+		RESERVED3,
+		ILBC_20 = 100
 	};
 };
 
-extern int audioCodecClockRate[];
+//extern int audioCodecClockRate[];
 
-extern int audioCodecChannels[];
+//extern int audioCodecChannels[];
 
 } /* namespace agh */
 

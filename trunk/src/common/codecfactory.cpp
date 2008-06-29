@@ -22,6 +22,8 @@
 #include "codecfactory.h"
 #include "dummycodec.h"
 #include "g711.h"
+#include "gsm.h"
+#include "ilbc20.h"
 #include "globals.h"
 
 namespace agh {
@@ -34,26 +36,33 @@ CodecFactory::~CodecFactory()
 {
 }
 
-Codec& CodecFactory::getCodec(int id)
+Codec *CodecFactory::getCodec(int id)
 {
 	Codec *retCodec = NULL;
 	
 	switch(id) {
 	case AudioCodec::PCMU:
-		if (instanceMap.find(AudioCodec::PCMU) == instanceMap.end()) {
-			instanceMap[AudioCodec::PCMU] = new G711u();
-		}
-		retCodec = instanceMap[AudioCodec::PCMU];
+		retCodec = new G711u();
 		break;
+	
+	case AudioCodec::PCMA:
+		retCodec = new G711a();
+		break;
+		
+	case AudioCodec::GSM:
+		retCodec = new GSM();
+		break;
+		
+	case AudioCodec::ILBC_20:
+		retCodec = new ILBC20();
+		break;
+		
 	default:
-		if (instanceMap.find(-1) == instanceMap.end()) {
-			instanceMap[-1] = new DummyCodec();
-		}
-		retCodec = instanceMap[-1];
+		retCodec = new DummyCodec();
 		break;
 	}
 	
-	return *retCodec;
+	return retCodec;
 }
 
 } /* namespace agh */

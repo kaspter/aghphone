@@ -91,7 +91,7 @@ int Transceiver::setOutputDevice(const string& dev)
 
 int Transceiver::setCodec(int codec)
 {
-	this->codec = &(cf->getCodec(codec));
+	this->codec = cf->getCodec(codec);
 
 	this->framesPerBuffer = this->codec->getFrameCount();
 	this->jitterMult = 5;
