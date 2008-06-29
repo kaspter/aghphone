@@ -55,7 +55,7 @@ const int Mixer::defaultIcePort = 24474;
 const int Mixer::defaultRtpPort = 5004;
 
 Mixer::Mixer(int lIcePort) :
-	remotePort(defaultRtpPort), localPort(defaultRtpPort),
+			localRTPPort(defaultRtpPort),
 			localIcePort(lIcePort), localAddr(0),
 			remoteAddr(0), currentState(States::DISCONNECTED), ic(0), adapter(0) {
 	
@@ -98,16 +98,12 @@ bool Mixer::isConnected() const {
 void Mixer::setLocalRtpPort(int port) {
 	if ((port < 1024) || (port > 32768)) {
 	} else {
-		localPort = port;
+		localRTPPort = port;
 	}
 }
 
 int Mixer::getLocalRtpPort() const {
-	return localPort;
-}
-
-int Mixer::getDestinationRtpPort() const {
-	return remotePort;
+	return localRTPPort;
 }
 
 const IPV4Address* Mixer::getRemoteHost() const {
@@ -131,8 +127,7 @@ TerminalCapabilities Mixer::remoteGetCapabilities(const ::Ice::Current& curr) {
 	// TODO	
 }
 
-void Mixer::remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr) {
-	// TODO
+void Mixer::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::Identity& ident, const ::Ice::Current& curr) {
 	stringstream a;
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteTryConnect()"));
 	masterCallbackPrx = IMasterCallbackPrx::uncheckedCast(curr.con->createProxy(ident));
@@ -144,19 +139,24 @@ void Mixer::remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity
 		delete remoteAddr;
 	}
 	
-	// TODO check call parameters, if ok then
+	// TODO input/output codecs 
 	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
-	remoteHosts.push_back(*tmpAddr);
+	TerminalInfo info;
+	info.address = *tmpAddr;
+	info.rtpPort = params.masterRtpPort;
+	remoteHosts.push_back(info);
+	a << "Mixer::remoteTryConnect() conf received, remote addr: " << tmpAddr << " port: " << params.masterRtpPort;
+ 	LOG4CXX_DEBUG(logger, a.str());
 	
 	changeState(States::PASSIVE_CONNECTED);
 	
 	// inform remote site
 	CallParametersResponse response;
+	response.slaveRtpPort = localRTPPort;
 	masterCallbackPrx->remoteTryConnectAck(response);
 }
 
 void Mixer::remoteStartTransmission(const ::Ice::Current& curr) {
-	// TODO
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission()"));
 	
 	if (this->currentState != States::PASSIVE_CONNECTED) {
@@ -179,108 +179,6 @@ void Mixer::foo(const ::Ice::Current& curr) {
 	
 }
 
-/*
-int Mixer::remoteTryConnect(const Ice::Current& cur) {
-	LOG4CXX_DEBUG(logger, "Mixer::remoteConnect()");
-	if (currentState == DISCONNECTED) {
-		if (localCallback && !localCallback->onIncomingCall(*remoteAddr))
-			return RequestConnectResult::REJECTED;
-		currentState = PASSIVE_CONNECTED;
-		LOG4CXX_DEBUG(logger, "Transition to PASSIVE_CONNECTED state");
-		if (remoteAddr)
-			delete remoteAddr;
-		if (localAddr)
-			delete localAddr;
-		remoteAddr = new IPV4Address(getRemoteAddressFromConnection(cur.con));
-		localAddr = new IPV4Address(getLocalAddressFromConnection(cur.con));
-		// TODO: Remote Callback register (add to ICE iterface!!)
-		return RequestConnectResult::SUCCESS;
-	} else {
-		return RequestConnectResult::BUSY;
-	}
-}
-
-int Mixer::remoteDisengage(int reason, const Ice::Current& cur) {
-	LOG4CXX_DEBUG(logger, "Mixer::remoteDisconnect(" << reason << ")");
-	if (currentState != DISCONNECTED) {
-		LOG4CXX_DEBUG(logger, "Transition to DISCONNECTED state");
-	}
-	return DisconnectResult::SUCCESS;
-}
-
-
-int Mixer::remotePing(const Ice::Current& cur) {
-	//TODO: To be implemented
-}
-
-
-prefferedCodecs Mixer::remoteGetPrefferedOutgoingCodec(
-		const Ice::Current& cur) {
-	//TODO: To be implemented
-	vector<int> codecs;
-	codecs.push_back(AudioCodec::PCMU);
-	return codecs;
-}
-
-prefferedCodecs Mixer::remoteGetPrefferedIncomingCodec(
-		const Ice::Current& cur) {
-	//TODO: To be implemented
-	vector<int> codecs;
-	codecs.push_back(AudioCodec::PCMU);
-	return codecs;
-}
-
-int Mixer::remoteSetOutgoingCodec(int codec, const Ice::Current& cur) {
-	this->codec = codec;
-}
-
-int Mixer::remoteResetOutgoingCodec(int codec, const Ice::Current& cur) {
-	//TODO: To be implemented
-}
-
-int Mixer::remoteSetDestinationPort(int port, const Ice::Current& cur) {
-	if (port < 1024 || port > 32768)port = defaultRtpPort;
-	remotePort = port;
-	return port;
-}
-
-int Mixer::remoteGetDestinationPort(int port, const Ice::Current& cur) {
-	return remotePort;
-}
-
-int Mixer::remoteGetSourcePort(const Ice::Current& cur) {
-	return localPort;
-}
-
-int Mixer::remoteStartTransmission(const Ice::Current& cur) {
-	LOG4CXX_DEBUG(logger, "Mixer::remoteStartTransmission()");
-	if (transceiver) {
-		transceiver->setCodec(codec);
-
-		transceiver->setLocalEndpoint(*localAddr, localPort);
-		transceiver->setRemoteEndpoint(*remoteAddr, remotePort);
-
-		int res = transceiver->start();
-
-		// TODO: switch to smarter error handling mechanism (like other methods)
-		if (res != 0) {
-			LOG4CXX_ERROR(logger, "Cannot start transmission");
-			return res;
-		}
-
-		if (currentState != PASSIVE_CONNECTED) {
-			LOG4CXX_ERROR(logger, "Not connected or transmission already set");
-			return -1;
-		}
-
-		LOG4CXX_DEBUG(logger, "Transition to PASSIVE_OPERATIONAL state");
-		currentState = PASSIVE_OPERATIONAL;
-		return 0; //TODO: change error mechanism
-	}
-	LOG4CXX_DEBUG(logger, "No transceiver");
-	return -1; //TODO: change error mechanism
-}
-*/
 } /* namespace agh */
 
 int main() {
@@ -293,6 +191,7 @@ int main() {
 	}
 	
 	Mixer m(12345);
+	m.setLocalRtpPort(22222);
 	
 	std::cout << "mixer is running...\n";
 }
