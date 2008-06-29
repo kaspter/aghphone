@@ -32,8 +32,7 @@ void WorkerThread::run() {
 	cout << "sleep in\n";
 	cout << "Ringin... Ringing ... phi phi....\n";
 	cout << "enter local RTP port(must be odd number): ";
-	int localRTPPort = 5008;;
-// 	cin >> localRTPPort;
+	int localRTPPort = 5008; // HACK hardcoded
 	Thread::sleep(2000);
 	this->terminal->setLocalRtpPort(localRTPPort);
 	CallParametersResponse response;
@@ -49,7 +48,7 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 	terminal->registerCallback(this);
 	
 	TransceiverFactory factory;
-	Transceiver* transceiver = factory.getTransceiver("alsa", "ccrtp");
+	Transceiver* transceiver = factory.getTransceiver("pa", "ccrtp");
 	
 	terminal->setTransceiver(transceiver);
 	
