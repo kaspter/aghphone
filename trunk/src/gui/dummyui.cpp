@@ -14,15 +14,26 @@ namespace agh {
 IMasterCallbackPrx masterCallback;
 
 class WorkerThread : public Thread {
-	virtual void run();
+	private:
+		Terminal *terminal;
+	public:
+		WorkerThread(Terminal* terminal);
+		virtual void run();
 };
+
+WorkerThread::WorkerThread(Terminal* terminal) {
+	this->terminal = terminal;
+}
 
 void WorkerThread::run() {
 	cout << "sleep in\n";
 	cout << "Ringin... Ringing ... phi phi....\n";
-	Thread::sleep(5000);
+	cout << "enter local RTP port(must be odd number): ";
+	int localRTPPort;
+	Thread::sleep(2000);
+	this->terminal->setLocalRtpPort(localRTPPort);
 	CallParametersResponse response;
-	response.slaveRtpPort = 3000; // TODO set rpt port
+	response.slaveRtpPort = localRTPPort;
 	masterCallback->remoteTryConnectAck(response);
 	cout << "sleep out\n";
 }
@@ -154,7 +165,7 @@ bool DummyUI::onStateTransition(int prevState, int curState, const IPV4Address& 
 	if (curState == States::PASSIVE_CONNECTED) {
 
 		masterCallback = terminal->getMasterCallback();
-		WorkerThread *p = new WorkerThread();
+		WorkerThread *p = new WorkerThread(terminal);
 		p->start();
 	}
 }

@@ -51,6 +51,12 @@ using namespace std;
 using namespace ost;
 
 namespace agh {
+	
+struct TerminalInfo {
+	string host;
+	int rtpPort;
+	IPV4Address address;
+};
 
 class Mixer : public ISlave {
 protected:
@@ -62,10 +68,8 @@ protected:
 
 	int codec;
 
-	int remotePort;
-	int localPort;
+	int localRTPPort;
 
-	int remoteIcePort;
 	int localIcePort;
 
 	IPV4Address *localAddr;
@@ -80,7 +84,7 @@ protected:
 	IMasterCallbackPtr masterCallbackPtr;
 	IMasterCallbackPrx masterCallbackPrx;
 	
-	vector<IPV4Address> remoteHosts;
+	vector<TerminalInfo> remoteHosts;
 
 public:
 	Mixer(int lIcePort = defaultIcePort);
@@ -89,7 +93,6 @@ public:
 	virtual bool isConnected() const; // TODO getState
 	virtual void setLocalRtpPort(int port);
 	virtual int getLocalRtpPort() const;
-	virtual int getDestinationRtpPort() const;
 	virtual const IPV4Address *getRemoteHost() const;
 	virtual const IPV4Address *getLocalHost() const;
     
