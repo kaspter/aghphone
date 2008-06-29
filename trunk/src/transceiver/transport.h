@@ -33,6 +33,8 @@ class Transport {
 public:
 	virtual ~Transport() {}
 	
+	virtual void setParams(int framesPerPacket, int frameSize) = 0;
+
 	virtual int setLocalEndpoint(const IPV4Address& addr, int port) = 0;
 	virtual int setRemoteEndpoint(const IPV4Address& addr, int port) = 0;
 	

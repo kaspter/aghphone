@@ -97,6 +97,8 @@ int Transceiver::setCodec(int codec)
 	this->jitterMult = 5;
 	this->packetSize = this->codec->getFrameSize();
 	
+	transport->setParams(this->framesPerBuffer, this->packetSize);
+	
 	if( this->codec == NULL )
 		return -1;
 	

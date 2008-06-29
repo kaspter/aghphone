@@ -53,7 +53,7 @@ Transceiver* TransceiverFactory::getTransceiver(const string& audio, const strin
 	}
 	
 	if(transport == "ccrtp") {
-		t = new TransportCCRTP(transceiver);
+		t = new TransportCCRTP();
 	} else {
 		delete a;
 		return NULL;
