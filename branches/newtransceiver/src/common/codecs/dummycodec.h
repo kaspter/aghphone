@@ -34,8 +34,8 @@ public:
 	int getFrameCount();
 	int getFrameSize();
 	float getFrequency();
-	long encode(void *dest, void *src);
-	long decode(void *dest, void *src);
+	int encode(char *dest, char *src);
+	int decode(char *dest, char *src, int srcsize);
 };
 
 } /* namespace agh */

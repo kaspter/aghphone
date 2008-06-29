@@ -47,7 +47,7 @@ public:
 class IMaster {
 	
 public:
-	
+	virtual ~IMaster() {}
 	virtual bool isConnected() const = 0;
 	
 	virtual int setLocalPort(int port) = 0;
@@ -64,7 +64,7 @@ public:
 	virtual int registerCallback(ICallback *callback) = 0;
 	virtual int unregisterCallback(int id) = 0;
 	
-	virtual int setTransceiver(ITransceiver *transceiver) = 0;
+	virtual int setTransceiver(Transceiver *transceiver) = 0;
 	virtual int unsetTransceiver() = 0;
 };
 
