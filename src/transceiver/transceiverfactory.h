@@ -19,39 +19,24 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __TRANSCEIVERFACTORY_H__INCLUDED__
+#define __TRANSCEIVERFACTORY_H__INCLUDED__
 
-#include <stdio.h>
+#include "transceiver.h"
+#include <string>
+
+using namespace std;
 
 namespace agh {
-	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+
+class TransceiverFactory {
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
-	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	TransceiverFactory();
+	~TransceiverFactory();
+
+	Transceiver* getTransceiver(const string& audio, const string& transport);
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif

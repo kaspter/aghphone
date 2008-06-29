@@ -19,39 +19,36 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __MSGBUFFER_H__INCLUDED__
+#define __MSGBUFFER_H__INCLUDED__
 
 #include <stdio.h>
 
 namespace agh {
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
+class MsgBuffer {
+	typedef struct {
+		int size;
+		char *data;
+	} msg_struct;
+	
+	msg_struct* msgTable;
+	
+	int maxMsgSize;
+	long tableSize;
 	long readyCount;
 	long writeCursor, readCursor;
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
+	MsgBuffer(int maxMsgSize, long tableSize);
+	~MsgBuffer();
 	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
-	
+	bool putMessage(char* data, int size);
+	int getMessage(char* dest);
+		
 	long getReadyCount();
 	long getFreeCount();
 };	
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif /* __MSGBUFFER_H__INCLUDED__ */

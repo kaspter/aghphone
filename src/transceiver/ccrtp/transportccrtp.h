@@ -19,39 +19,49 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __TRANSPORTCCRTP_H__INCLUDED__
+#define __TRANSPORTCCRTP_H__INCLUDED__
 
-#include <stdio.h>
+//#include "ringbuffer.h"
+#include "msgbuffer.h"
+#include "transport.h"
+#include "aghrtpsession.h"
+#include "transceiver.h"
+#include <cc++/address.h>
+#include <ccrtp/rtp.h>
+
+using namespace std;
 
 namespace agh {
+
+class TransportCCRTP : public Transport {
+	Transceiver *t;
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+	uint32 timestamp;
+	MsgBuffer *sendBuffer;
+	
+	IPV4Address localAddress;
+	int localPort;
+	IPV4Address remoteAddress;
+	int remotePort;
+	
+	AghRtpSession *socket;
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
+	TransportCCRTP(Transceiver *t);
+	~TransportCCRTP();
 	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
+	virtual int setLocalEndpoint(const IPV4Address& addr, int port);
+	virtual int setRemoteEndpoint(const IPV4Address& addr, int port);
 	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
+	virtual int start();
+	virtual int stop();
 	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	virtual void send(char* src, int size);
+	virtual int recv(char* dest);
+	
+	virtual void flush();
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif

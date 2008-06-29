@@ -19,39 +19,26 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __AGHRTPSESSION_H__INCLUDED__
+#define __AGHRTPSESSION_H__INCLUDED__
 
-#include <stdio.h>
+#include <cc++/address.h>
+#include <ccrtp/rtp.h>
+
+using namespace std;
+using namespace ost;
 
 namespace agh {
-	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+
+class AghRtpSession : public SymmetricRTPSession {
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
-	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	~AghRtpSession() {}
+	 
+	AghRtpSession(const InetHostAddress &host);
+	AghRtpSession(const InetHostAddress &host, unsigned short port);
+	uint32 getLastTimestamp(const SyncSource *src=NULL) const;
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif

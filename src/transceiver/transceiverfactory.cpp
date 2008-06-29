@@ -19,39 +19,50 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#include "audio.h"
+#include "transport.h"
+#include "audioalsa.h"
+#include "transportccrtp.h"
+#include "transceiverfactory.h"
+#include <string>
 
-#include <stdio.h>
+using namespace std;
 
 namespace agh {
+
+TransceiverFactory::TransceiverFactory()
+{
+}
+
+TransceiverFactory::~TransceiverFactory()
+{
+}
+
+Transceiver* TransceiverFactory::getTransceiver(const string& audio, const string& transport)
+{
+	Transceiver* transceiver = new Transceiver();
+	Audio* a = NULL;
+	Transport* t = NULL;
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
-public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
+	if(audio == "alsa") {
+		a = new AudioAlsa(transceiver);
+	} else if(audio == "pa") {
+		a = new AudioAlsa(transceiver);
+	} else {
+		return NULL;
 	}
 	
-	long getReadyCount();
-	long getFreeCount();
-};	
-
-} /* namespace agh */
-
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+	if(transport == "ccrtp") {
+		t = new TransportCCRTP(transceiver);
+	} else {
+		delete a;
+		return NULL;
+	}
+	
+	transceiver->setAudio(a);
+	transceiver->setTransport(t);
+	
+	return transceiver;
+}
+	
+}

@@ -26,6 +26,7 @@
 #include <Ice/Identity.h>
 
 #include "icecommon.h"
+#include "transceiver.h"
 #include "master.h"
 #include "states.h"
 
@@ -66,7 +67,7 @@ protected:
 	Ice::ObjectAdapterPtr adapter;
 
 	IUICallback* localCallback;
-	ITransceiver* transceiver;
+	Transceiver* transceiver;
 	
 	ISlavePrx remoteTerminal;
 	IMasterCallbackPtr masterCallbackPtr;
@@ -87,7 +88,7 @@ public:
 	virtual int startTransmission();
 	virtual void registerCallback(IUICallback *callback);
 	virtual void unregisterCallback();
-	virtual void setTransceiver(ITransceiver *transceiver);
+	virtual void setTransceiver(Transceiver *transceiver);
 	virtual void unsetTransceiver();
 	IMasterCallbackPrx getMasterCallback() { return masterCallbackPrx; }
     

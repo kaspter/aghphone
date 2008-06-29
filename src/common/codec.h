@@ -26,7 +26,8 @@ namespace agh {
 
 class Codec {
 public:
-	virtual ~Codec() {};
+	virtual ~Codec() {}
+	
 	
 	/**
 	 * @return time between sending each packet [ms]
@@ -36,16 +37,19 @@ public:
 	/**
 	 * @return number of frames in each packet, one frame contain one sample(in single channel stream)
 	 */
+	
 	virtual int getFrameCount() = 0;
 	
 	/**
 	 * @return size of one frame [B]
 	 */
+	
 	virtual int getFrameSize() = 0;
 	
 	/**
 	 * @return sampling frequency [Hz]
 	 */
+	
 	virtual float getFrequency() = 0;
 	
 	/**
@@ -53,14 +57,15 @@ public:
 	 * @param[in]  src  pointer to a buffer from which data to encode will be read
 	 * @return number of bytes written to the destination buffer
 	 */
-	virtual long encode(void *dest, void *src) = 0;
+	virtual int encode(char *dest, char *src) = 0;
 	
 	/**
 	 * @param[out] dest pointer to a buffer to which decoded packet will be written
 	 * @param[in]  src  pointer to a buffer from which data to decode will be read
+	 * @param srcsize	size in bytes of the data in buffer src
 	 * @return number of bytes written to the destination buffer
 	 */
-	virtual long decode(void *dest, void *src) = 0;
+	virtual int decode(char *dest, char *src, int srcsize) = 0;
 };
 
 } /* namespace agh */

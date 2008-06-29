@@ -59,7 +59,7 @@ public:
 	virtual void registerCallback(IUICallback *callback) = 0;
 	virtual void unregisterCallback() = 0;
 	
-	virtual void setTransceiver(ITransceiver *transceiver) = 0;
+	virtual void setTransceiver(Transceiver *transceiver) = 0;
 	virtual void unsetTransceiver() = 0;
 	
 	virtual void onACK(const CallParametersResponse&) = 0;

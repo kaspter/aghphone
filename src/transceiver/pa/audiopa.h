@@ -19,93 +19,99 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TRANSCEIVER_H__INCLUDED__
-#define __TRANSCEIVER_H__INCLUDED__
+#ifndef __TRANSCEIVERPA_H__INCLUDED__
+#define __TRANSCEIVERPA_H__INCLUDED__
 
-#include "audio.h"
 #include "device.h"
-#include "audio.h"
-#include "transport.h"
-#include "codec.h"
-#include "codecfactory.h"
-
-#include <vector>
+#include "aghrtpsession.h"
+#include "transceiver.h"
+#include "devicefactorypa.h"
 #include <cc++/address.h>
-#include <string>
-#include <map>
-
-#include <portaudio.h>
-#include <alsa/asoundlib.h>
-#include <ccrtp/rtp.h>
 
 using namespace std;
 using namespace ost;
 
-#define RING_BUFFER_SIZE	480
-
-
 namespace agh {
 
-#define SAMPLE_TYPE	paInt16
-typedef short sampleType;
+typedef struct {
+	sampleType *inputBuffer;
+	sampleType *outputBuffer;
+	bool outputReady;
+	bool inputReady;
+	AghRtpSession *socket;
+	int packetCounter;
+	sampleType ringBuffer[RING_BUFFER_SIZE];
+	sampleType *ringBufferEnd;
+	int ringBufferWriteIndex;
+	int ringBufferReadIndex;
+} CallbackData; 
 
-class Transceiver;
-//class Audio;
-
-class Transmitter : public Thread, TimerPort {
-	Transceiver *t;
+class TransceiverPa;
 	
-	RingBuffer *outBuffer;
+class TransmitterCore : public Thread, public TimerPort {
+	TransceiverPa* t;
+	
 public:
-	Transmitter(Transceiver *t);
-	~Transmitter();
+	TransmitterCore(TransceiverPa* tpa);
+	~TransmitterCore();
 	
 	void run();
 };
 
-class Receiver : public Thread, TimerPort {
-	Transceiver *t;
+class ReceiverCore : public Thread, public TimerPort {
+	TransceiverPa* t;
+	
 public:
-	Receiver(Transceiver *t);
-	~Receiver();
+	ReceiverCore(TransceiverPa* tpa);
+	~ReceiverCore();
 	
 	void run();
 };
 
-class Transceiver {
-	CodecFactory *cf;
+class TransceiverPa : public ITransceiver {
+private:
+
+	friend class TransmitterCore;
+	friend class ReceiverCore;
+
+	DeviceFactoryPa* devMgr;
+	const IDevice* inputDevice;
+	const IDevice* outputDevice;
 	
-	Transmitter *transmitter;
-	Receiver *receiver;
+	IPV4Address localAddress;
+	int localPort;
+	IPV4Address remoteAddress;
+	int remotePort;
 	
-public:
-	Audio *audio;
-	Transport *transport;
-	Codec* codec;
+	PaStream* inputStream;
+	PaStream* outputStream;
+	//PaStream* stream;
+	CallbackData cData;
+	AghRtpSession *socket;
+	
+	TransmitterCore *tCore;
+	ReceiverCore *rCore;
 	
 	int framesPerBuffer;
-	int jitterMult;
-	int packetSize;
 	
-	Transceiver();
-	~Transceiver();
-	void setAudio(Audio* audio);
-	void setTransport(Transport* transport);
+	void openStream();
+public: 
+	TransceiverPa();
+	~TransceiverPa();
 	vector<IDevice*> getAvailableInputDevices() const;
 	vector<IDevice*> getAvailableOutputDevices() const;
 	int setInputDevice(const IDevice& dev);
 	int setOutputDevice(const IDevice& dev);
-	int setInputDevice(const string& dev);
-	int setOutputDevice(const string& dev);
+	int setInputDevice(const int id);
+	int setOutputDevice(const int id);
 	int setCodec(int codec);
 	int setLocalEndpoint(const IPV4Address& addr, int port);
 	int setRemoteEndpoint(const IPV4Address& addr, int port);
 	
 	int start();
 	int stop();
-	
 };
 
 } /* namespace agh */
 
-#endif /* __TRANSCEIVER_H__INCLUDED__ */
+#endif

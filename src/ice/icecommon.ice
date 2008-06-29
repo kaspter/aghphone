@@ -9,15 +9,15 @@ module agh {
 	exception ConnectionRejectedException extends VoipException {
 	};
 
-	struct Codec {
+	struct ICodec {
 		int id;
 	};
 
-	sequence<Codec> Codecs;
+	sequence<ICodec> Codecs;
 
 	struct CallParameters {
-		Codec outgoingCodec;
-		Codec incomingCodec;
+		ICodec outgoingCodec;
+		ICodec incomingCodec;
 		int masterRtpPort;
 	};
 

@@ -19,39 +19,32 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __TRANSPORT_H__INCLUDED__
+#define __TRANSPORT_H__INCLUDED__
 
-#include <stdio.h>
+#include <cc++/address.h>
+
+using namespace std;
+using namespace ost;
 
 namespace agh {
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+class Transport {
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
+	virtual ~Transport() {}
 	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
+	virtual int setLocalEndpoint(const IPV4Address& addr, int port) = 0;
+	virtual int setRemoteEndpoint(const IPV4Address& addr, int port) = 0;
 	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
+	virtual int start() = 0;
+	virtual int stop() = 0;
 	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	virtual void send(char* src, int size) = 0;
+	virtual int recv(char* dest) = 0;
+	
+	virtual void flush() = 0;
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif
