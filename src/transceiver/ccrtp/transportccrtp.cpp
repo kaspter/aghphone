@@ -139,7 +139,7 @@ void TransportCCRTP::flush()
 {
 	if( sendBuffer->getReadyCount() > 0 ) {
 		uint32 current_timestamp = socket->getCurrentTimestamp();
-		printf("%ld %ld\n", current_timestamp, timestamp);
+		//printf("%ld %ld\n", current_timestamp, timestamp);
 		//fprintf(out1, "%ld\n", current_timestamp);
 		//fprintf(out2, "%ld\n", timestamp);
 		if(seq32_t(timestamp) <= seq32_t(current_timestamp + framesPerPacket)) { 
@@ -150,8 +150,8 @@ void TransportCCRTP::flush()
 			sendBuffer->skipMessage();
 			timestamp += framesPerPacket;
 		} else {
-			printf("discarding surplus of audio samples, current timestamp: %ld, timestamp: %ld\n",
-				current_timestamp, timestamp); fflush(stdout);
+			//printf("discarding surplus of audio samples, current timestamp: %ld, timestamp: %ld\n",
+				//current_timestamp, timestamp); fflush(stdout);
 		}
 		
 		if(current_timestamp > timestamp)
