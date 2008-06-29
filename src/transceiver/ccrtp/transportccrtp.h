@@ -49,6 +49,8 @@ class TransportCCRTP : public Transport {
 	
 	int framesPerPacket;
 	int frameSize;
+	
+	FILE *out1, *out2;
 public:
 	TransportCCRTP();
 	~TransportCCRTP();

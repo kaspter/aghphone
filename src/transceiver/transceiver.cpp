@@ -151,22 +151,21 @@ void Transmitter::run()
 {
 	char buf[2048];
 	
+	TimerPort::setTimer(20);
+	
 	while( 1 ) {
 		t->audio->read();
-		
 		bool canRead = t->audio->getData((void*)buf, t->framesPerBuffer);
-		
 		if( canRead ) {
 			char bufferenc[2048];
-		
 			int elen = t->codec->encode(bufferenc, buf);
-		
 			t->transport->send(bufferenc, elen);
 		}
 		
 		t->transport->flush();
 		
-		Thread::sleep(5);
+		Thread::sleep(TimerPort::getTimer());
+		TimerPort::incTimer(20);
 	}
 }
 
@@ -181,6 +180,8 @@ Receiver::~Receiver()
 
 void Receiver::run()
 {
+	TimerPort::setTimer(20);
+	
 	while(1) {
 		char buf[2048];
 		long size = t->transport->recv(buf);
@@ -193,7 +194,8 @@ void Receiver::run()
 		
 		t->audio->flush();
 		
-		Thread::sleep(5);
+		Thread::sleep(TimerPort::getTimer());
+		TimerPort::incTimer(20);
 	}
 }
 

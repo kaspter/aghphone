@@ -21,7 +21,9 @@
 
 #include "transportccrtp.h"
 #include "restypes.h"
+#include "sequence_number.h"
 #include <stdio.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -32,6 +34,9 @@ TransportCCRTP::TransportCCRTP()
 	sendBuffer = new MsgBuffer(4096, 20);
 	framesPerPacket = 0;
 	frameSize = 0;
+	
+//	out1 = fopen("out1", "w");
+//	out2 = fopen("out2", "w");
 }
 
 TransportCCRTP::~TransportCCRTP()
@@ -101,10 +106,13 @@ int TransportCCRTP::start()
 	    cerr << "not active." << endl;
 	
 	timestamp = socket->getCurrentTimestamp() + frameSize*framesPerPacket;
+	
+	return 0;
 }
 
 int TransportCCRTP::stop()
 {
+	return 0;
 }
 	
 void TransportCCRTP::send(char* src, int size)
@@ -130,12 +138,26 @@ int TransportCCRTP::recv(char* dest)
 void TransportCCRTP::flush()
 {
 	if( sendBuffer->getReadyCount() > 0 ) {
-		socket->setExpireTimeout(frameSize*framesPerPacket * 1000);
-		char buf[2048];
-		int length = sendBuffer->getMessage(buf);
-		socket->putData(timestamp, (unsigned char*)buf, length);
-		timestamp+=framesPerPacket;
+		uint32 current_timestamp = socket->getCurrentTimestamp();
+		printf("%ld %ld\n", current_timestamp, timestamp);
+		//fprintf(out1, "%ld\n", current_timestamp);
+		//fprintf(out2, "%ld\n", timestamp);
+		if(seq32_t(timestamp) <= seq32_t(current_timestamp + framesPerPacket)) { 
+			socket->setExpireTimeout(frameSize*framesPerPacket * 1000);
+			char *buf;
+			int length = sendBuffer->peekMessage(&buf);
+			socket->putData(timestamp, (unsigned char*)buf, length);
+			sendBuffer->skipMessage();
+			timestamp += framesPerPacket;
+		} else {
+			printf("discarding surplus of audio samples, current timestamp: %ld, timestamp: %ld\n",
+				current_timestamp, timestamp); fflush(stdout);
+		}
+		
+		if(current_timestamp > timestamp)
+			timestamp = socket->getCurrentTimestamp();
 	}
+	sendBuffer->debug();
 }
 
 } /* namespace agh */

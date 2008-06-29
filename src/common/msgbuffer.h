@@ -44,9 +44,14 @@ public:
 	
 	bool putMessage(char* data, int size);
 	int getMessage(char* dest);
+	
+	int peekMessage(char **dataPtr);
+	void skipMessage();
 		
 	long getReadyCount();
 	long getFreeCount();
+	
+	void debug();
 };	
 
 } /* namespace agh */
