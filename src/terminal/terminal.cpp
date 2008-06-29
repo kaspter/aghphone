@@ -178,9 +178,8 @@ void Terminal::connect(const IPV4Address& addr, int remoteIcePort) {
 	tmpAdapter->activate();
 	remoteTerminal->ice_getConnection()->setAdapter(tmpAdapter);
 
-	remoteTerminal->remoteTryConnect(params, tmpIdentity);
-
 	this->changeState(States::ACTIVE_CONNECTED);
+	remoteTerminal->remoteTryConnect(params, tmpIdentity);
 }
 
 void Terminal::changeState(int newState) {
