@@ -35,7 +35,7 @@ using namespace std;
 namespace agh {
 
 class TransportCCRTP : public Transport {
-	Transceiver *t;
+//	Transceiver *t;
 	
 	uint32 timestamp;
 	MsgBuffer *sendBuffer;
@@ -46,9 +46,14 @@ class TransportCCRTP : public Transport {
 	int remotePort;
 	
 	AghRtpSession *socket;
+	
+	int framesPerPacket;
+	int frameSize;
 public:
-	TransportCCRTP(Transceiver *t);
+	TransportCCRTP();
 	~TransportCCRTP();
+	
+	virtual void setParams(int framesPerPacket, int frameSize);
 	
 	virtual int setLocalEndpoint(const IPV4Address& addr, int port);
 	virtual int setRemoteEndpoint(const IPV4Address& addr, int port);

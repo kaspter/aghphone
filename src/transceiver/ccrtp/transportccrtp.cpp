@@ -27,14 +27,21 @@ using namespace std;
 
 namespace agh {
 	
-TransportCCRTP::TransportCCRTP(Transceiver *t)
+TransportCCRTP::TransportCCRTP()
 {
-	this->t = t;
 	sendBuffer = new MsgBuffer(4096, 20);
+	framesPerPacket = 0;
+	frameSize = 0;
 }
 
 TransportCCRTP::~TransportCCRTP()
 {
+}
+
+void TransportCCRTP::setParams(int framesPerPacket, int frameSize)
+{
+	this->framesPerPacket = framesPerPacket;
+	this->frameSize = frameSize;
 }
 	
 int TransportCCRTP::setLocalEndpoint(const IPV4Address& addr, int port)
@@ -55,6 +62,11 @@ int TransportCCRTP::setRemoteEndpoint(const IPV4Address& addr, int port)
 	
 int TransportCCRTP::start()
 {
+	if( (frameSize <= 0) || (framesPerPacket <= 0)) {
+		cout << "Transport fatal : frameSize or framesPerPacket not set" << endl;
+		return -1;
+	}
+	
 	if( (localPort == -1 ) ) {
 		cout << "Endpoint error: " << localAddress << ":" << localPort << endl;
 		return TransceiverStartResult::LOCAL_ENDPOINT_ERROR;
@@ -88,7 +100,7 @@ int TransportCCRTP::start()
 	else
 	    cerr << "not active." << endl;
 	
-	timestamp = socket->getCurrentTimestamp() + sizeof(sampleType)*t->framesPerBuffer;
+	timestamp = socket->getCurrentTimestamp() + frameSize*framesPerPacket;
 }
 
 int TransportCCRTP::stop()
@@ -118,11 +130,11 @@ int TransportCCRTP::recv(char* dest)
 void TransportCCRTP::flush()
 {
 	if( sendBuffer->getReadyCount() > 0 ) {
-		socket->setExpireTimeout(t->packetSize*t->framesPerBuffer * 1000);
+		socket->setExpireTimeout(frameSize*framesPerPacket * 1000);
 		char buf[2048];
 		int length = sendBuffer->getMessage(buf);
 		socket->putData(timestamp, (unsigned char*)buf, length);
-		timestamp+=t->framesPerBuffer;
+		timestamp+=framesPerPacket;
 	}
 }
 
