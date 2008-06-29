@@ -40,6 +40,7 @@
 #include "globals.h"
 #include "tools.h"
 #include "master.h"
+#include "transceiverfactory.h"
 #include "transceiver.h"
 
 using namespace std;
@@ -89,7 +90,7 @@ protected:
 	ISlavePrx remoteTerminal;
 
 	ICallback* localCallback;
-	ITransceiver* transceiver;
+	Transceiver* transceiver;
 
 public:
 	Terminal(int lIcePort = defaultIcePort, int rIcePort = defaultIcePort);
@@ -106,7 +107,7 @@ public:
 	virtual int startTransmission();
 	virtual int registerCallback(agh::ICallback* callback);
 	virtual int unregisterCallback(int id);
-	virtual int setTransceiver(agh::ITransceiver* trans);
+	virtual int setTransceiver(agh::Transceiver* trans);
 	virtual int unsetTransceiver();
 
 	virtual int remoteConnect(const Ice::Current& cur);
@@ -257,6 +258,8 @@ int Terminal::connect(const IPV4Address& addr, int port) {
 	currentState = ACTIVE_CONNECTED;
 
 	// TODO: Add connection monitor (heartbeat)
+	
+	return 0;
 }
 
 int Terminal::startTransmission() {
@@ -312,18 +315,22 @@ int Terminal::disconnect() {
 // TODO: switch to smarter mechanism?
 int Terminal::registerCallback(agh::ICallback* callback) {
 	localCallback = callback;
+	return 0;
 }
 
 int Terminal::unregisterCallback(int s) {
 	localCallback = 0;
+	return 0;
 }
 
-int Terminal::setTransceiver(agh::ITransceiver* trans) {
+int Terminal::setTransceiver(agh::Transceiver* trans) {
 	transceiver = trans;
+	return 0;
 }
 
 int Terminal::unsetTransceiver() {
 	transceiver = 0;
+	return 0;
 }
 
 int Terminal::remoteConnect(const Ice::Current& cur) {
@@ -356,6 +363,7 @@ int Terminal::remoteDisconnect(int reason, const Ice::Current& cur) {
 
 int Terminal::remotePing(const Ice::Current& cur) {
 	//TODO: To be implemented
+	return 0;
 }
 
 prefferedCodecs Terminal::remoteGetPrefferedOutgoingCodec(
@@ -376,10 +384,12 @@ prefferedCodecs Terminal::remoteGetPrefferedIncomingCodec(
 
 int Terminal::remoteSetOutgoingCodec(int codec, const Ice::Current& cur) {
 	this->codec = codec;
+	return 0;
 }
 
 int Terminal::remoteResetOutgoingCodec(int codec, const Ice::Current& cur) {
 	//TODO: To be implemented
+	return 0;
 }
 
 int Terminal::remoteSetDestinationPort(int port, const Ice::Current& cur) {
@@ -464,8 +474,9 @@ int main(int argc, char *argv[]) {
 
 	sleep(6000);
 	*/
-
-	TransceiverAlsa *itr = new TransceiverAlsa();
+	TransceiverFactory *tf = new TransceiverFactory();
+	Transceiver *itr = tf->getTransceiver("alsa", "ccrtp");
+	itr->setCodec(-1);
 	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
 	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
 	
@@ -473,7 +484,8 @@ int main(int argc, char *argv[]) {
 		itr->setInputDevice(argv[5]);
 	if(argc >= 7)
 		itr->setOutputDevice(argv[6]);
-		
+	
+	
 	itr->start();
 	
 	cout << "Press any key to exit..." << endl;

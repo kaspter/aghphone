@@ -6,7 +6,7 @@ extra_clean :=
 objects = $(subst .cpp,.o,$(sources))
 dependencies = $(subst .cpp,.d,$(sources))
 
-include_dirs := common gui ice terminal transceiver common/codecs
+include_dirs := common gui ice terminal transceiver transceiver/alsa transceiver/ccrtp common/codecs
 
 bin_dir := ../bin
 
@@ -32,6 +32,9 @@ include gui/module.mk
 include ice/module.mk
 include terminal/module.mk
 include transceiver/module.mk
+include transceiver/alsa/module.mk
+include transceiver/ccrtp/module.mk
+#include transceiver/pa/module.mk
 include common/codecs/module.mk
 
 .PHONY: all

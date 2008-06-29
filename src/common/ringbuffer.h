@@ -22,6 +22,8 @@
 #ifndef __RINGBUFFER_H__INCLUDED__
 #define __RINGBUFFER_H__INCLUDED__
 
+#include <stdio.h>
+
 namespace agh {
 	
 class RingBuffer {
@@ -35,9 +37,19 @@ public:
 	~RingBuffer();
 	
 	bool putData(char *data, long size);
+	bool putSilence(long size);
 	bool getData(char *data, long size);
+	bool peekData(char *data, long size);
+	bool skipData(long size);
+	bool moveData(RingBuffer *dest, long size);
+	
+	char* getInputPtr() {
+		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
+		return buffer+readCursor*sampleSize;
+	}
 	
 	long getReadyCount();
+	long getFreeCount();
 };	
 
 } /* namespace agh */
