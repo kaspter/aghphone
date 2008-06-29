@@ -19,39 +19,48 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#include "aghrtpsession.h"
 
-#include <stdio.h>
+using namespace std;
+using namespace ost;
 
 namespace agh {
+
+AghRtpSession::AghRtpSession(const InetHostAddress &host) :
+	SymmetricRTPSession(host) 
+{
+}
+
+AghRtpSession::AghRtpSession(const InetHostAddress &host, unsigned short port) : 
+	SymmetricRTPSession(host, port) 
+{
+}
+
+uint32 AghRtpSession::getLastTimestamp(const SyncSource *src) const {
+	if ( src && !isMine(*src) ) return 0L;
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
-public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
+	recvLock.readLock();
+
+	uint32 ts = 0;	
+	if (src != NULL) {
+		SyncSourceLink* srcm = getLink(*src);
+		IncomingRTPPktLink* l = srcm->getFirst();
+		
+		while (l) {
+			ts = l->getTimestamp();
+			l = l->getSrcNext();
+		}
+	} else {
+		IncomingRTPPktLink* l = recvFirst;
+		
+		while (l) {
+			ts = l->getTimestamp();
+			l = l->getNext();
+		}
 	}
 	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	recvLock.unlock();
+	return ts;
+}
 
-} /* namespace agh */
-
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+}

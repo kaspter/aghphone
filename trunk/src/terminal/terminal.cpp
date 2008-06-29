@@ -265,7 +265,7 @@ void Terminal::unregisterCallback() {
 	localCallback = 0;
 }
 
-void Terminal::setTransceiver(agh::ITransceiver* trans) {
+void Terminal::setTransceiver(agh::Transceiver* trans) {
 	transceiver = trans;
 }
 

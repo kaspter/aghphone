@@ -19,39 +19,36 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __DEVICE_H__INCLUDED__
+#define __DEVICE_H__INCLUDED__
 
-#include <stdio.h>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 namespace agh {
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+class IDevice {
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
-	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	virtual ~IDevice() {}
+	virtual const string& getName() const = 0;
+	virtual int getID() const = 0;
+	virtual const string& getHostAPI() const = 0;
+
+	virtual double getDefaultLowInputLatency() const = 0;
+	virtual double getDefaultLowOutputLatency() const = 0;
+	virtual double getDefaultHighInputLatency() const = 0;
+	virtual double getDefaultHighOutputLatency() const = 0;
+	virtual double getDefaultSampleRate() const = 0;
+	virtual const vector<double>& getSupportedSampleRatesHalfDuplexInput() const = 0;
+	virtual const vector<double>& getSupportedSampleRatesHalfDuplexOutput() const = 0;
+	virtual const vector<double>& getSupportedSampleRatesFullDuplex() const = 0;
+
+	virtual int getSupportedChannelCountOutput() const = 0;
+	virtual int getSupportedChannelCountInput() const = 0;
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif

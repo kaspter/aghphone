@@ -23,7 +23,7 @@ int DummyCodec::getFrameCount()
 
 int DummyCodec::getFrameSize()
 {
-	return 16;
+	return 2;
 }
 
 float DummyCodec::getFrequency()
@@ -31,7 +31,7 @@ float DummyCodec::getFrequency()
 	return 8000.0;
 }
 
-long DummyCodec::encode(void *dest, void *src)
+int DummyCodec::encode(char *dest, char *src)
 {
 	int size = getFrameCount()*getFrameSize();
 	
@@ -40,13 +40,11 @@ long DummyCodec::encode(void *dest, void *src)
 	return size;
 }
 
-long DummyCodec::decode(void *dest, void *src)
+int DummyCodec::decode(char *dest, char *src, int srcsize)
 {
-	int size = getFrameCount()*getFrameSize();
+	memcpy(dest, src, srcsize);
 	
-	memcpy(dest, src, size);
-	
-	return size;
+	return srcsize;
 }
 
 } /* namespace agh */

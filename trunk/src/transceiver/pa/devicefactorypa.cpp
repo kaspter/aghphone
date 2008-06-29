@@ -19,39 +19,32 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#include "devicefactorypa.h"
+#include <portaudio.h>
+#include <iostream>
 
-#include <stdio.h>
+using namespace std;
 
 namespace agh {
-	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
-public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
-	
-	long getReadyCount();
-	long getFreeCount();
-};	
 
-} /* namespace agh */
+DeviceFactoryPa::DeviceFactoryPa()
+{
+	deviceCount = Pa_GetDeviceCount();
+	
+	for(int i=0; i<deviceCount; i++)
+		devs.push_back( new DevicePa(i) );
+	
+	cout << "Found " << deviceCount << " supported audio devices." << endl;
+}
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+IDevice& DeviceFactoryPa::getDefaultInputDevice() const
+{
+	return getDevice(Pa_GetDefaultInputDevice());
+}
+
+IDevice& DeviceFactoryPa::getDefaultOutputDevice() const
+{
+	return getDevice(Pa_GetDefaultOutputDevice());
+}
+
+}

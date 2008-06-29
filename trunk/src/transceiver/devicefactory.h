@@ -19,39 +19,25 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __DEVICEFACTORY_H__INCLUDED__
+#define __DEVICEFACTORY_H__INCLUDED__
 
-#include <stdio.h>
+#include "device.h"
+
+using namespace std;
 
 namespace agh {
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+class IDeviceFactory {
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
+	virtual ~IDeviceFactory() {}
+	virtual int getDeviceCount() const = 0;
+	virtual IDevice& getDevice(int index) const = 0;
 	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
-	}
-	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	virtual IDevice& getDefaultInputDevice() const = 0;
+	virtual IDevice& getDefaultOutputDevice() const = 0;
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif

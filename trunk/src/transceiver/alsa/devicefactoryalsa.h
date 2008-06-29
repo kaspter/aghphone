@@ -19,39 +19,50 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __RINGBUFFER_H__INCLUDED__
-#define __RINGBUFFER_H__INCLUDED__
+#ifndef __DEVICEFACTORYALSA_H__INCLUDED__
+#define __DEVICEFACTORYALSA_H__INCLUDED__
 
-#include <stdio.h>
+#include "device.h"
+#include "devicealsa.h"
+#include "devicefactory.h"
+#include <vector>
+#include <map>
+
+using namespace std;
 
 namespace agh {
 	
-class RingBuffer {
-	char* buffer;
-	long bufferSize;
-	int sampleSize;
-	long readyCount;
-	long writeCursor, readCursor;
+class DeviceFactoryAlsa : public IDeviceFactory {
+	IDevice *defaultDevice;
+	vector<DeviceAlsa*> devs;
+	map<string, DeviceAlsa*> devmap;
 public:
-	RingBuffer(long size, int packetSize);
-	~RingBuffer();
-	
-	bool putData(char *data, long size);
-	bool putSilence(long size);
-	bool getData(char *data, long size);
-	bool peekData(char *data, long size);
-	bool skipData(long size);
-	bool moveData(RingBuffer *dest, long size);
-	
-	char* getInputPtr() {
-		printf("buffersize : %ld, readCursor : %ld, sampleSize : %d\n", bufferSize, readCursor, sampleSize); 
-		return buffer+readCursor*sampleSize;
+	DeviceFactoryAlsa()
+	{
+		DeviceAlsa *dev = new DeviceAlsa("default");
+		devs.push_back(dev);
+		devmap["default"] = dev;
+		defaultDevice = dev;
 	}
 	
-	long getReadyCount();
-	long getFreeCount();
-};	
+	int getDeviceCount() const { return devs.size(); }
+	IDevice& getDevice(int index) const { return (IDevice& )(*devs[index]); }
+	IDevice& getDevice(const string name) { 
+		map<string, DeviceAlsa*>::iterator iter; 
+		if((iter = devmap.find(name)) != devmap.end())
+			return *((*iter).second);
+		 else {
+		 	DeviceAlsa *dev = new DeviceAlsa(name);
+		 	devmap[name] = dev;
+		 	devs.push_back(dev);
+		 	return *dev;
+		 }
+	}
+	
+	IDevice& getDefaultInputDevice() const { return *defaultDevice; }
+	IDevice& getDefaultOutputDevice() const { return *defaultDevice; }
+};
 
 } /* namespace agh */
 
-#endif /* __RINGBUFFER_H__INCLUDED__ */
+#endif
