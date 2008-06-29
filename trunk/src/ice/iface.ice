@@ -11,6 +11,10 @@ module agh {
 		void remoteTryConnectNack();
 	};
 	
+	interface IMixer {
+		void foo();
+	};
+	
 	interface ISlave {
 		
 		TerminalCapabilities remoteGetCapabilities();

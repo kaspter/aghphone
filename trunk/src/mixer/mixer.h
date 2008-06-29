@@ -19,41 +19,51 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TERMINAL_H__INCLUDED__
-#define __TERMINAL_H__INCLUDED__
+#ifndef __MIXER_H__INCLUDED__
+#define __MIXER_H__INCLUDED__
 
 #include <Ice/Ice.h>
 #include <Ice/Identity.h>
 
-#include "icecommon.h"
-#include "transceiver.h"
-#include "master.h"
+#include <string>
+#include <vector>
+
+#include "tools.h"
+// #include "icecommon.h"
+#include "iface.h"
 #include "states.h"
+// #include "../ice/states.h"
+
+// #include "../common/master.h"
+// #include "../ice/icecommon.h"
+
+
+// #include "../ice/iface.h"
+// #include "../common/restypes.h"
+// #include "../common/globals.h"
+// #include "../common/tools.h"
+// #include "../ice/icecommon.h"
+// #include "../transceiver/transceiver.h"
+
+// #include "../common/states.h"
+
+using namespace std;
+using namespace ost;
 
 namespace agh {
 
-class MasterCallbackImpl : public IMasterCallback {
-protected:
-	agh::IMaster *master;
-public:
-	MasterCallbackImpl(agh::IMaster *master);
-	
-    virtual void remoteTryConnectAck(const CallParametersResponse& response, const ::Ice::Current& curr);	
-    virtual void remoteTryConnectNack(const ::Ice::Current& curr);
-};
-
-class Terminal : public ISlave, public IMaster {
+class Mixer : public ISlave {
 protected:
 	const static string adapterName;
 	const static string adapterCallbackName;
-	const static string remoteTerminalName;
+	const static string remoteMixerName;
 	const static int defaultIcePort;
 	const static int defaultRtpPort;
 
 	int codec;
 
-	int remoteRTPPort;
-	int localRTPPort;
+	int remotePort;
+	int localPort;
 
 	int remoteIcePort;
 	int localIcePort;
@@ -65,41 +75,32 @@ protected:
 
 	Ice::CommunicatorPtr ic;
 	Ice::ObjectAdapterPtr adapter;
-
-	IUICallback* localCallback;
-	Transceiver* transceiver;
 	
-	ISlavePrx remoteTerminal;
+// 	ISlavePrx remoteMixer;
 	IMasterCallbackPtr masterCallbackPtr;
 	IMasterCallbackPrx masterCallbackPrx;
+	
+	vector<IPV4Address> remoteHosts;
 
 public:
-	Terminal(int lIcePort = defaultIcePort);
-	virtual ~Terminal();
+	Mixer(int lIcePort = defaultIcePort);
+	virtual ~Mixer();
 	
 	virtual bool isConnected() const; // TODO getState
-	virtual void connect(const IPV4Address& addr, int remoteIcePort);
-	virtual void disengage();
 	virtual void setLocalRtpPort(int port);
 	virtual int getLocalRtpPort() const;
 	virtual int getDestinationRtpPort() const;
 	virtual const IPV4Address *getRemoteHost() const;
 	virtual const IPV4Address *getLocalHost() const;
-	virtual int startTransmission();
-	virtual void registerCallback(IUICallback *callback);
-	virtual void unregisterCallback();
-	virtual void setTransceiver(Transceiver *transceiver);
-	virtual void unsetTransceiver();
-	IMasterCallbackPrx getMasterCallback() { return masterCallbackPrx; }
     
+	/* ISlave */
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);
-
     virtual void remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr);
     virtual void remoteStartTransmission(const ::Ice::Current& curr);
     virtual void remoteDisengage(const ::Ice::Current& curr); 
-    
-    virtual void onACK(const ::agh::CallParametersResponse&);
-    virtual void onNACK();
+	
+	/* IMixer */
+	virtual void foo(const ::Ice::Current& curr);
 private:
 	void changeState(int newState);
 };
@@ -107,4 +108,3 @@ private:
 } /* namespace */
 
 #endif /* __TERMINAL_H__INCLUDED__ */
-

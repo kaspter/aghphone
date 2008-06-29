@@ -24,7 +24,7 @@
 
 #include <Ice/Ice.h>
 #include <cc++/socket.h>
-#include <iface.h>
+//#include <iface.h>
 
 #define safeDelete(ptr) {	\
 	if ((ptr)) delete ptr;	\

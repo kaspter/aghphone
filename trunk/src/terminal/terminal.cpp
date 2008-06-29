@@ -61,17 +61,15 @@ const string Terminal::remoteTerminalName("Slave");
 const int Terminal::defaultIcePort = 24474;
 const int Terminal::defaultRtpPort = 5004;
 
-Terminal::Terminal(int lIcePort, int rIcePort) :
-	remotePort(defaultRtpPort), localPort(defaultRtpPort),
-			remoteIcePort(rIcePort), localIcePort(lIcePort), localAddr(0),
+Terminal::Terminal(int lIcePort) :
+			remoteRTPPort(0), localRTPPort(defaultRtpPort),
+			localIcePort(lIcePort), localAddr(0),
 			remoteAddr(0), currentState(States::DISCONNECTED), ic(0), adapter(0),
 			remoteTerminal(0), localCallback(0), transceiver(0),
 			codec(AudioCodec::PCMU) {
 	
 	cout << "Constructor" << endl;
 	
-	if ((remoteIcePort < 1024) || (remoteIcePort > 32768))
-		remoteIcePort = defaultIcePort;
 	if ((localIcePort < 1024) || (localIcePort > 32768))
 		localIcePort = defaultIcePort;
 
@@ -83,7 +81,6 @@ Terminal::Terminal(int lIcePort, int rIcePort) :
 	ISlavePtr localTerminal = this;
 	adapter->add(localTerminal, ic->stringToIdentity(remoteTerminalName));
 	adapter->activate();
-	
 }
 
 Terminal::~Terminal() {
@@ -107,16 +104,16 @@ bool Terminal::isConnected() const {
 void Terminal::setLocalRtpPort(int port) {
 	if ((port < 1024) || (port > 32768)) {
 	} else {
-		localPort = port;
+		localRTPPort = port;
 	}
 }
 
 int Terminal::getLocalRtpPort() const {
-	return localPort;
+	return localRTPPort;
 }
 
 int Terminal::getDestinationRtpPort() const {
-	return remotePort;
+	return remoteRTPPort;
 }
 
 const IPV4Address* Terminal::getRemoteHost() const {
@@ -127,11 +124,11 @@ const IPV4Address* Terminal::getLocalHost() const {
 	return localAddr;
 }
 
-//TODO: Implement
-void Terminal::connect(const IPV4Address& addr, int port) {
+// TODO retrieve and choose codec
+void Terminal::connect(const IPV4Address& addr, int remoteIcePort) {
 	stringstream a;
 	a << addr;
-	LOG4CXX_DEBUG(logger, string("Terminal::connect(") << a.str() << ", " << port << ")");
+	LOG4CXX_DEBUG(logger, string("Terminal::connect(") << a.str() << ", " << remoteIcePort << ")");
 	
 	if (currentState != States::DISCONNECTED) {
 		LOG4CXX_INFO(logger, "Already connected");
@@ -144,8 +141,8 @@ void Terminal::connect(const IPV4Address& addr, int port) {
 		throw VoipException();
 	}
 	
-	if ((port < 1024) || (port > 32768)) {
-		LOG4CXX_ERROR(logger, "Incorrect or out of range port number: " << port);
+	if ((remoteIcePort < 1024) || (remoteIcePort > 32768)) {
+		LOG4CXX_ERROR(logger, "Incorrect or out of range port number: " << remoteIcePort);
 		//TODO: Another Exception
 		throw VoipException();
 	}
@@ -153,7 +150,7 @@ void Terminal::connect(const IPV4Address& addr, int port) {
 	if (remoteAddr)
 		delete remoteAddr;
 	remoteAddr = new IPV4Address(addr);
-	remoteIcePort = port;
+	this->remoteIcePort = remoteIcePort;
 	localAddr = new IPV4Address("0.0.0.0");
 	
 	stringstream remoteEndpoint;
@@ -169,8 +166,9 @@ void Terminal::connect(const IPV4Address& addr, int port) {
 	LOG4CXX_DEBUG(logger, "Successfully received remote object");
 
 	LOG4CXX_DEBUG(logger, "Calling remote site");
-	//TODO: Do smth w params
+	//TODO: Do smth w params codecs incoming & outgoings
 	CallParameters params;
+	params.masterRtpPort = localRTPPort;
 	
 	masterCallbackPtr = new MasterCallbackImpl((IMaster*) this);
 	Ice::ObjectAdapterPtr tmpAdapter;
@@ -183,14 +181,9 @@ void Terminal::connect(const IPV4Address& addr, int port) {
 	tmpAdapter->activate();
 	remoteTerminal->ice_getConnection()->setAdapter(tmpAdapter);
 	
-	this->changeState(States::ACTIVE_CONNECTED);
 	remoteTerminal->remoteTryConnect(params, tmpIdentity);
 	
-	// change state
-	cout << "AAAAAAAAAAAAAAAAAAAAAA\n";
-	
-
-	
+	this->changeState(States::ACTIVE_CONNECTED);
 }
 
 void Terminal::changeState(int newState) {
@@ -198,7 +191,6 @@ void Terminal::changeState(int newState) {
 	LOG4CXX_DEBUG(logger, "Terminal::changeState()");
 	
 	if (this->localCallback != 0) {
-			// TODO inform UI, UI needs to be implemented first
 			localCallback->onStateTransition(currentState, newState, *localAddr);
 		}
 	a << string("Terminal::changeState() prev: ") << this->currentState << " new: " << newState;
@@ -213,13 +205,13 @@ int Terminal::startTransmission() {
 			LOG4CXX_ERROR(logger, "Not connected or transmission already set");
 			return -1;
 		}
-		//TODO: Codec negotiation
+		//TODO: set codec
 		transceiver->setCodec(AudioCodec::PCMU); //uLaw
 
 		// TODO: How the hell master is able to know its nic's address
 		// transceiver->setLocalEndpoint()
-		transceiver->setLocalEndpoint(*localAddr, localPort);
-		transceiver->setRemoteEndpoint(*remoteAddr, remotePort);
+		transceiver->setLocalEndpoint(*localAddr, localRTPPort);
+		transceiver->setRemoteEndpoint(*remoteAddr, remoteRTPPort);
 
 		int res = 0;
 		//int res = transceiver->start();
@@ -277,7 +269,7 @@ TerminalCapabilities Terminal::remoteGetCapabilities(const ::Ice::Current& curr)
 	
 }
 
-void Terminal::remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr) {
+void Terminal::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::Identity& ident, const ::Ice::Current& curr) {
 	stringstream a;
 	LOG4CXX_DEBUG(logger, string("Terminal::remoteTryConnect()"));
 	masterCallbackPrx = IMasterCallbackPrx::uncheckedCast(curr.con->createProxy(ident));
@@ -290,6 +282,9 @@ void Terminal::remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Ident
 	}
 	remoteAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
 	localAddr = new IPV4Address(getLocalAddressFromConnection(curr.con));
+	
+	remoteRTPPort = params.masterRtpPort;
+	// TODO read & set codec (already choosen by master)
 	
 	changeState(States::PASSIVE_CONNECTED);
 }
@@ -321,16 +316,16 @@ void Terminal::onACK(const ::agh::CallParametersResponse& param) {
 	if (this->currentState != States::ACTIVE_CONNECTED) {
 		LOG4CXX_DEBUG(logger, string("Terminal::onACK() bad state"));
 	} else {
-		remotePort = param.slaveRtpPort;
+		remoteRTPPort = param.slaveRtpPort;
 		
-		cout << "XXXX:" << remotePort << endl;
-		if (remotePort <= 1024 || remotePort >= 32765 ) {
+		cout << "XXXX:" << remoteRTPPort << endl;
+		if (remoteRTPPort <= 1024 || remoteRTPPort >= 32765 ) {
 // 			throw VoipException(); TODO
 		}
 		
 		stringstream a;
-		a << "Terminal::onACK() " << "localH: " << *localAddr << " localP:" << localPort \
-			<< " remoteH: " << *remoteAddr << " remoteP: "<<  remotePort;
+		a << "Terminal::onACK() " << "localH: " << *localAddr << " localP:" << localRTPPort \
+			<< " remoteH: " << *remoteAddr << " remoteP: "<<  remoteRTPPort;
 		LOG4CXX_DEBUG(logger, a.str());
 		
 		// perform connection
@@ -358,7 +353,6 @@ void MasterCallbackImpl::remoteTryConnectAck(const ::agh::CallParametersResponse
 void MasterCallbackImpl::remoteTryConnectNack(const ::Ice::Current& curr) {
 	master->onNACK();
 }
-
 
 /*
 int Terminal::remoteTryConnect(const Ice::Current& cur) {

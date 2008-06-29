@@ -22,6 +22,7 @@ void WorkerThread::run() {
 	cout << "Ringin... Ringing ... phi phi....\n";
 	Thread::sleep(5000);
 	CallParametersResponse response;
+	response.slaveRtpPort = 3000; // TODO set rpt port
 	masterCallback->remoteTryConnectAck(response);
 	cout << "sleep out\n";
 }
@@ -29,7 +30,7 @@ void WorkerThread::run() {
 DummyUI::DummyUI(int lIcePort, int rIcePort) {
 	this->lIcePort = lIcePort;
 	this->rIcePort = rIcePort;
-	terminal = new Terminal(lIcePort, rIcePort);
+	terminal = new Terminal(lIcePort);
 	terminal->registerCallback(this);
 	
 	int key;
