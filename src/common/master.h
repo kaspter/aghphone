@@ -22,10 +22,11 @@
 #ifndef __MASTER_H__INCLUDED__
 #define __MASTER_H__INCLUDED__
 
-#include "transceiver.h"
-#include "icecommon.h"
-#include "states.h"
 #include <cc++/address.h>
+#include "../transceiver/transceiver.h"
+#include "../ice/icecommon.h"
+#include "../ice/states.h"
+
 
 using namespace ost;
 

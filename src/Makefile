@@ -6,14 +6,14 @@ extra_clean :=
 objects = $(subst .cpp,.o,$(sources))
 dependencies = $(subst .cpp,.d,$(sources))
 
-include_dirs := common ice directory terminal transceiver common/codecs gui transceiver/alsa transceiver/ccrtp common/codecs
+include_dirs := common ice directory terminal transceiver common/codecs gui transceiver/alsa transceiver/ccrtp common/codecs mixer
 
 bin_dir := ../bin
 
 CXX := g++
 CXXFLAGS = -Wall -ansi -pedantic -g -I. -D__UNIX $(addprefix -I ,$(include_dirs))
 LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1
-SLICEFLAGS = -I /usr/share/Ice/slice/
+SLICEFLAGS = -I ${ICE_HOME}/slice/
 SLICE := slice2cpp ${SLICEFLAGS}
 vpath %.h $(include_dirs)
 
@@ -38,6 +38,7 @@ include transceiver/ccrtp/module.mk
 #include transceiver/pa/module.mk
 include common/codecs/module.mk
 include gui/module.mk
+include mixer/module.mk
 
 .PHONY: all
 all: ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)
