@@ -4,13 +4,13 @@ local_objs := $(subst .cpp,.o,$(local_src))
 sources += $(local_src)
 extra_clean += $(local_dir)/directory.cpp $(local_dir)/directory.h $(local_dir)/directory.o
 
-directory/%.cpp: directory/%.ice
+directory/directory.cpp: directory/directory.ice ice/icecommon.cpp
 		$(ECHO_ICE)
 		cd directory && $(SLICE) $(<F)
 
 programs += $(bin_dir)/directory
 
-$(bin_dir)/directory: $(local_objs) directory/directory.o ice/icecommon.o
+$(bin_dir)/directory: directory/directory.o ice/icecommon.o $(local_objs) 
 		$(ECHO_COMPILE_EXEC)
 		$(CXX) $(LDFLAGS) -o $@ $^
 

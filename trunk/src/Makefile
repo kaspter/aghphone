@@ -6,7 +6,7 @@ extra_clean :=
 objects = $(subst .cpp,.o,$(sources))
 dependencies = $(subst .cpp,.d,$(sources))
 
-include_dirs := common gui ice terminal transceiver common/codecs directory
+include_dirs := common ice directory terminal transceiver common/codecs  gui
 
 bin_dir := ../bin
 
@@ -29,15 +29,15 @@ ECHO_CLEAN = @echo -e "\n\033[01;32m***********************************\n* Clean
 all:
 
 include common/module.mk
-include gui/module.mk
 include ice/module.mk
+include directory/module.mk
 include terminal/module.mk
 include transceiver/module.mk
 include common/codecs/module.mk
-include directory/module.mk
+include gui/module.mk
 
 .PHONY: all
-all: ice/icecommon.o ice/iface.o directory/directory.ice $(programs)
+all: ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)
 
 .PHONY: libraries
 libraries: $(libraries)

@@ -389,12 +389,12 @@ int Terminal::remoteDisengage(int reason, const Ice::Current& cur) {
 	return DisconnectResult::SUCCESS;
 }
 
-/*
+
 int Terminal::remotePing(const Ice::Current& cur) {
 	//TODO: To be implemented
 }
 
-/*
+
 prefferedCodecs Terminal::remoteGetPrefferedOutgoingCodec(
 		const Ice::Current& cur) {
 	//TODO: To be implemented
