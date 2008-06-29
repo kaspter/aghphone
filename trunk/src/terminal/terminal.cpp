@@ -183,10 +183,12 @@ void Terminal::connect(const IPV4Address& addr, int port) {
 	tmpAdapter->activate();
 	remoteTerminal->ice_getConnection()->setAdapter(tmpAdapter);
 	
+	this->changeState(States::ACTIVE_CONNECTED);
 	remoteTerminal->remoteTryConnect(params, tmpIdentity);
 	
 	// change state
-	this->changeState(States::ACTIVE_CONNECTED);
+	cout << "AAAAAAAAAAAAAAAAAAAAAA\n";
+	
 
 	
 }
@@ -200,7 +202,7 @@ void Terminal::changeState(int newState) {
 			localCallback->onStateTransition(currentState, newState, *localAddr);
 		}
 	a << string("Terminal::changeState() prev: ") << this->currentState << " new: " << newState;
-	LOG4CXX_DEBUG(logger, a);
+	LOG4CXX_DEBUG(logger, a.str());
 	this->currentState = newState;
 }
 
@@ -293,17 +295,19 @@ void Terminal::remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Ident
 }
 
 void Terminal::remoteStartTransmission(const ::Ice::Current& curr) {
-	LOG4CXX_DEBUG(logger, string("Terminal::onACK()"));
+	cout << "XXXX\n";
+	cout.flush();
+	LOG4CXX_DEBUG(logger, string("Terminal::remoteStartTransmission()"));
 	
 	if (this->currentState != States::PASSIVE_CONNECTED) {
-		LOG4CXX_DEBUG(logger, string("Terminal::onACK() bad state"));
+		LOG4CXX_DEBUG(logger, string("Terminal::remoteStartTransmission() bad state"));
 	} else {
 		changeState(States::PASSIVE_OPERATIONAL);
 
 		cout << "TRANSCEIVER STARTED\n";
 		
 		// TODO start RTP.RTCP transmission
-		LOG4CXX_DEBUG(logger, string("Terminal::onACK() transmission started"));
+		LOG4CXX_DEBUG(logger, string("Terminal::remoteStartTransmission() transmission started"));
 	}
 }
 
@@ -319,20 +323,24 @@ void Terminal::onACK(const ::agh::CallParametersResponse& param) {
 	} else {
 		remotePort = param.slaveRtpPort;
 		
+		cout << "XXXX:" << remotePort << endl;
 		if (remotePort <= 1024 || remotePort >= 32765 ) {
-			throw VoipException();
+// 			throw VoipException(); TODO
 		}
 		
 		stringstream a;
 		a << "Terminal::onACK() " << "localH: " << *localAddr << " localP:" << localPort \
 			<< " remoteH: " << *remoteAddr << " remoteP: "<<  remotePort;
-		LOG4CXX_DEBUG(logger, a);
+		LOG4CXX_DEBUG(logger, a.str());
 		
 		// perform connection
 		remoteTerminal->remoteStartTransmission();
-		this->startTransmission();
+		LOG4CXX_DEBUG(logger, string("Terminal::onACK() starting transmission"));
+// 		this->startTransmission();
 		
+		cout << "Before change state\n";
 		changeState(States::ACTIVE_OPERATIONAL);
+		cout << "After change state\n";
 	}
 }
 
