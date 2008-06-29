@@ -117,6 +117,8 @@ printf("dupa\n"); fflush(stdout);
 	if(err < 0) cout << "Alsa error : cannot start capture stream : " << snd_strerror(err) << endl;
 	else cout << "started capture stream" << endl;
 
+	initTime();
+
 	return 0;
 }
 
@@ -308,7 +310,7 @@ void AudioAlsa::printTime() {
 	
 	gettimeofday(&czas_teraz, NULL);
 	
-	printf("%3ld.%3ld [s]\n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
+	printf("%3ld.%3ld [s] ", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
 }
 
 void AudioAlsa::resetTimerMs() {
@@ -366,7 +368,7 @@ void AudioAlsa::read()
 	if(alsa_can_read(capture_handle, framesPerBuffer*(int)(sampleRate/8000.0))) {
 		char buf[2048];
 		int err = alsa_read(capture_handle, (unsigned char*)buf, (int)framesPerBuffer*(int)(sampleRate/8000.0));
-			
+		
 		if(err <= 0) {
 			cout << "Failed to read samples from capture device : " << snd_strerror(err) << endl;
 		} else {

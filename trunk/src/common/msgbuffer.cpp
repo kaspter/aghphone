@@ -71,4 +71,26 @@ long MsgBuffer::getFreeCount()
 	return tableSize - readyCount;
 }
 
+int MsgBuffer::peekMessage(char **dataPtr)
+{
+	msg_struct* msgptr = &msgTable[readCursor];
+	*dataPtr = msgptr->data;
+	return msgptr->size;
+}
+
+void MsgBuffer::skipMessage()
+{
+	if(readyCount > 0) {
+		readCursor++;
+		if(readCursor >= tableSize)
+			readCursor -= tableSize;
+		readyCount--;
+	}
+}
+
+void MsgBuffer::debug()
+{
+//	printf("sendBuffer| readycount: %ld, writeCursor: %ld, readCursor: %ld\n", readyCount, writeCursor, readCursor); 
+}
+
 } /* namespace agh */
