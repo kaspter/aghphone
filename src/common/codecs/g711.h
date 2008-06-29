@@ -19,55 +19,43 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "dummycodec.h"
-#include <cstring>
+#ifndef __G711_H__INCLUDED__
+#define __G711_H__INCLUDED__
 
-using namespace std;
+#include "codec.h"
 
 namespace agh {
 
-DummyCodec::DummyCodec()
-{
-}
-
-DummyCodec::~DummyCodec()
-{
-}
-
-int DummyCodec::getDelay()
-{
-	return 20;
-}
-
-int DummyCodec::getFrameCount()
-{
-	return 160;
-}
-
-int DummyCodec::getFrameSize()
-{
-	return 2;
-}
-
-float DummyCodec::getFrequency()
-{
-	return 8000.0;
-}
-
-int DummyCodec::encode(char *dest, char *src)
-{
-	int size = getFrameCount()*getFrameSize();
+class G711u : public Codec {
+protected:
+	short buf[160];
 	
-	memcpy(dest, src, size);
-	
-	return size;
-}
+public:
+	G711u();
+	~G711u();
+	int getDelay();
+	int getFrameCount();
+	int getFrameSize();
+	float getFrequency();
+	int encode(char *dest, char *src);
+	int decode(char *dest, char *src, int srcsize);
+};
 
-int DummyCodec::decode(char *dest, char *src, int srcsize)
-{
-	memcpy(dest, src, srcsize);
+class G711a : public Codec {
+protected:
+	short buf[160];
 	
-	return srcsize;
-}
+public:
+	G711a();
+	~G711a();
+	int getDelay();
+	int getFrameCount();
+	int getFrameSize();
+	float getFrequency();
+	int encode(char *dest, char *src);
+	int decode(char *dest, char *src, int srcsize);
+};
 
 } /* namespace agh */
+
+#endif /* __G711_H__INCLUDED__ */

@@ -3,14 +3,15 @@ sources :=
 libraries :=
 extra_clean :=
 
-objects = $(subst .cpp,.o,$(sources))
-dependencies = $(subst .cpp,.d,$(sources))
+objects = $(subst .c,.o,$(subst .cpp,.o,$(sources)))
 
 include_dirs := common ice directory terminal transceiver common/codecs gui transceiver/alsa transceiver/ccrtp common/codecs mixer
 
 bin_dir := ../bin
 
 CXX := g++
+CC := gcc
+CFLAGS = -Wall -ansi -pedantic -g -I. $(addprefix -I ,$(include_dirs))
 CXXFLAGS = -Wall -ansi -pedantic -g -I. -D__UNIX $(addprefix -I ,$(include_dirs))
 LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1
 SLICEFLAGS = -I ${ICE_HOME}/slice/
@@ -39,6 +40,7 @@ include transceiver/ccrtp/module.mk
 include common/codecs/module.mk
 include gui/module.mk
 include mixer/module.mk
+include common/codecs/legacy/g711/module.mk
 
 .PHONY: all
 all: ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)
@@ -49,11 +51,11 @@ libraries: $(libraries)
 .PHONY: clean
 clean:
 	$(ECHO_CLEAN)
-	$(RM) $(objects) $(programs) $(libraries) $(dependencies) $(extra_clean)
+	$(RM) $(objects) $(programs) $(libraries) $(extra_clean)
 
-ifneq "$(MAKECMDGOALS)" "clean"
-	include $(dependencies)
-endif
+#ifneq "$(MAKECMDGOALS)" "clean"
+#	include $(dependencies)
+#endif
 
 %.o: %.cpp
 	$(ECHO_COMPILE)

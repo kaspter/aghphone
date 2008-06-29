@@ -11,6 +11,7 @@ $(bin_dir)/aghphone: $(local_objs) \
 	transceiver/ccrtp/aghrtpsession.o common/codecs/dummycodec.o \
 	transceiver/alsa/devicealsa.o transceiver/alsa/devicefactoryalsa.o \
 	transceiver/alsa/audioalsa.o transceiver/ccrtp/transportccrtp.o \
-	transceiver/transceiver.o transceiver/transceiverfactory.o common/msgbuffer.o
+	transceiver/transceiver.o transceiver/transceiverfactory.o common/msgbuffer.o \
+	common/codecs/legacy/g711/g711.o common/codecs/g711.o
 		$(ECHO_COMPILE_EXEC)
 		$(CXX) $(LDFLAGS) -o $@ $^
