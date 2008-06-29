@@ -32,7 +32,8 @@ void WorkerThread::run() {
 	cout << "sleep in\n";
 	cout << "Ringin... Ringing ... phi phi....\n";
 	cout << "enter local RTP port(must be odd number): ";
-	int localRTPPort;
+	int localRTPPort = 5008;;
+// 	cin >> localRTPPort;
 	Thread::sleep(2000);
 	this->terminal->setLocalRtpPort(localRTPPort);
 	CallParametersResponse response;
