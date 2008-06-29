@@ -6,7 +6,7 @@ extra_clean :=
 objects = $(subst .cpp,.o,$(sources))
 dependencies = $(subst .cpp,.d,$(sources))
 
-include_dirs := common gui ice terminal transceiver common/codecs
+include_dirs := common gui ice terminal transceiver common/codecs directory
 
 bin_dir := ../bin
 
@@ -34,9 +34,10 @@ include ice/module.mk
 include terminal/module.mk
 include transceiver/module.mk
 include common/codecs/module.mk
+include directory/module.mk
 
 .PHONY: all
-all: ice/icecommon.o ice/iface.o  $(programs)
+all: ice/icecommon.o ice/iface.o directory/directory.ice $(programs)
 
 .PHONY: libraries
 libraries: $(libraries)
