@@ -19,25 +19,56 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CODECFACTORY_H__INCLUDED__
-#define __CODECFACTORY_H__INCLUDED__
-
-#include <map>
-#include "codec.h"
-
-using namespace std;
+#include "ilbc20.h"
 
 namespace agh {
-
-class CodecFactory {
-	map<int, Codec*> instanceMap;
-public:
-	CodecFactory();
-	~CodecFactory();
 	
-	Codec *getCodec(int id);
-};
+ILBC20::ILBC20() {
+    ::initEncode(&iLBCenc_inst, 20);
+    ::initDecode(&iLBCdec_inst, 20, 1);
+}
 
-} /* namespace agh */
+ILBC20::~ILBC20() {
+	
+}
 
-#endif /* __CODECFACTORY_H__INCLUDED__ */
+int ILBC20::getDelay() {
+	return 20;
+} 
+
+int ILBC20::getFrameCount() {
+	return 160;
+}
+
+int ILBC20::getFrameSize() {
+	return 2;
+}
+
+float ILBC20::getFrequency() {
+	return 8000.0f;
+}
+
+int ILBC20::encode(char *dest, char *src) {
+	for (int i = 0; i < getFrameCount(); ++i) {
+		buf[i] = (float) ((short *)src)[i];
+	}
+	::iLBC_encode((unsigned char *)dest, buf, &iLBCenc_inst);
+	return iLBCenc_inst.no_of_bytes;
+}
+
+int ILBC20::decode(char *dest, char *src, int srcsize) {
+	::iLBC_decode(buf, (unsigned char *)src, &iLBCdec_inst, 1);
+	for (int i = 0; i < getFrameCount(); ++i) {
+		float t = buf[i];
+		if (t < MIN_SAMPLE) {
+			t = MIN_SAMPLE;
+		}
+		if (t > MAX_SAMPLE) {
+			t = MAX_SAMPLE;
+		}
+		((short *) dest)[i] = (short) t;
+	}
+	return iLBCenc_inst.blockl;
+}
+
+}

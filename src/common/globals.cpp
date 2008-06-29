@@ -26,7 +26,7 @@ namespace agh {
 /** According to RFC3551
  *  See http://www.ietf.org/rfc/rfc3551.txt
  */
-
+/*
 int audioCodecClockRate[] = {
 		8000,
 		0,
@@ -72,5 +72,5 @@ int audioCodecChannels[] = {
 		1,
 		0
 };
-
+*/
 }

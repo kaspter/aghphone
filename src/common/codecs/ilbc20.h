@@ -18,26 +18,35 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef __ILBC_20_H__INCLUDED__
+#define __ILBC_20_H__INCLUDED__
 
-#ifndef __CODECFACTORY_H__INCLUDED__
-#define __CODECFACTORY_H__INCLUDED__
-
-#include <map>
 #include "codec.h"
-
-using namespace std;
-
+extern "C" {
+#include "legacy/ilbc/iLBC_define.h"
+#include "legacy/ilbc/iLBC_decode.h"
+#include "legacy/ilbc/iLBC_encode.h"
+}
+	
 namespace agh {
 
-class CodecFactory {
-	map<int, Codec*> instanceMap;
-public:
-	CodecFactory();
-	~CodecFactory();
+class ILBC20 : public Codec {
+protected:
+	iLBC_Enc_Inst_t iLBCenc_inst;
+	iLBC_Dec_Inst_t iLBCdec_inst;
+	float buf[160];
 	
-	Codec *getCodec(int id);
+public:
+	ILBC20();
+	~ILBC20();
+	int getDelay();
+	int getFrameCount();
+	int getFrameSize();
+	float getFrequency();
+	int encode(char *dest, char *src);
+	int decode(char *dest, char *src, int srcsize);
 };
 
-} /* namespace agh */
+}
 
-#endif /* __CODECFACTORY_H__INCLUDED__ */
+#endif /* __ILBC_20_H__INCLUDED__ */
