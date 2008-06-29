@@ -6,15 +6,14 @@ extra_clean :=
 objects = $(subst .cpp,.o,$(sources))
 dependencies = $(subst .cpp,.d,$(sources))
 
-include_dirs := common ice directory terminal transceiver common/codecs  gui
+include_dirs := common gui ice terminal transceiver common/codecs
 
 bin_dir := ../bin
 
 CXX := g++
 CXXFLAGS = -Wall -ansi -pedantic -g -I. -D__UNIX $(addprefix -I ,$(include_dirs))
 LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1
-SLICEFLAGS = -I /usr/share/slice/
-SLICE := slice2cpp ${SLICEFLAGS}
+SLICE := slice2cpp
 vpath %.h $(include_dirs)
 
 MV := mv -f
@@ -29,15 +28,14 @@ ECHO_CLEAN = @echo -e "\n\033[01;32m***********************************\n* Clean
 all:
 
 include common/module.mk
+include gui/module.mk
 include ice/module.mk
-include directory/module.mk
 include terminal/module.mk
 include transceiver/module.mk
 include common/codecs/module.mk
-include gui/module.mk
 
 .PHONY: all
-all: ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)
+all: ice/iface.o $(programs)
 
 .PHONY: libraries
 libraries: $(libraries)

@@ -52,9 +52,51 @@ struct AudioCodec {
 	};
 };
 
-extern int audioCodecClockRate[];
+int audioCodecClockRate[] = {
+		8000,
+		0,
+		0,
+		8000,
+		8000,
+		8000,
+		16000,
+		8000,
+		8000,
+		8000,
+		44100,
+		44100,
+		8000,
+		8000,
+		90000,
+		8000,
+		11025,
+		22050,
+		8000,
+		0
+};
 
-extern int audioCodecChannels[];
+int audioCodecChannels[] = {
+		1,
+		0,
+		0,
+		1,
+		1,
+		1,
+		1,
+		1,
+		1,
+		1,
+		2,
+		1,
+		1,
+		1,
+		2,
+		1,
+		1,
+		1,
+		1,
+		0
+};
 
 } /* namespace agh */
 

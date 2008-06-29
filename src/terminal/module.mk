@@ -5,6 +5,6 @@ sources += $(local_src)
 
 programs += $(bin_dir)/aghphone
 
-$(bin_dir)/aghphone: $(local_objs) directory/directory.o gui/dummyui.o common/globals.o common/main.o common/tools.o common/codecfactory.o common/ringbuffer.o ice/iface.o ice/icecommon.o transceiver/transceiver.o common/codecs/dummycodec.o 
+$(bin_dir)/aghphone: $(local_objs) common/tools.o common/codecfactory.o common/ringbuffer.o ice/iface.o transceiver/transceiver.o common/codecs/dummycodec.o
 		$(ECHO_COMPILE_EXEC)
 		$(CXX) $(LDFLAGS) -o $@ $^

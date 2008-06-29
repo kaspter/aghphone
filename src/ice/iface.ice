@@ -1,27 +1,24 @@
-#include <Ice/Identity.ice>
-#include "icecommon.ice"
-
-
-
 module agh {
-
-	interface IMasterCallback {
 	
-		void remoteTryConnectAck(CallParametersResponse response);	
-		void remoteTryConnectNack();
-	};
+	sequence<int> prefferedCodecs;
 	
 	interface ISlave {
+		int remoteConnect();
+		int remoteDisconnect(int reason);
 		
-		TerminalCapabilities remoteGetCapabilities();
+		int remotePing();
 		
-		void remoteTryConnect(CallParameters parameters, ::Ice::Identity masterIdent)
-								throws TerminalBusyException, ConnectionRejectedException;
+		prefferedCodecs remoteGetPrefferedOutgoingCodec();
+		prefferedCodecs remoteGetPrefferedIncomingCodec();
+		int remoteSetOutgoingCodec(int codec);
+		int remoteResetOutgoingCodec(int codec);
 		
-		void remoteStartTransmission();
+		int remoteSetDestinationPort(int port);
+		int remoteGetDestinationPort(int port);
+		int remoteGetSourcePort();
 		
-		void remoteDisengage();
-	
+		int remoteStartTransmission();
 	};
 
 };
+

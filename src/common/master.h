@@ -23,47 +23,49 @@
 #define __MASTER_H__INCLUDED__
 
 #include "transceiver.h"
-#include "icecommon.h"
-#include "states.h"
+
 #include <cc++/address.h>
 
 using namespace ost;
 
 namespace agh {
 
-class IUICallback {
+class ICallback {
 	
 public:
-	virtual ~IUICallback() {}
+	virtual ~ICallback() = 0;
 	
 	/**
 	 * if returns false the call is rejected
 	 */
-	virtual bool onStateTransition(int prevState, int curState, const IPV4Address& addr) = 0;
+	virtual bool onIncomingCall(const IPV4Address& addr) = 0;
+	
+	virtual bool onDisconnect() = 0;
+	virtual bool onConnect() = 0;
 };
 
 class IMaster {
+	
 public:
-	virtual ~IMaster() {}
-	virtual void connect(const IPV4Address& addr, int icePort) = 0;
-	virtual void disengage() = 0;
+	
 	virtual bool isConnected() const = 0;
-	virtual void setLocalRtpPort(int port) = 0;
-	virtual int getLocalRtpPort() const = 0;
-	virtual int getDestinationRtpPort() const = 0;
+	
+	virtual int setLocalPort(int port) = 0;
+	virtual int getLocalPort() const = 0;
+	virtual int getDestinationPort() const = 0;
 	virtual const IPV4Address *getRemoteHost() const = 0;
 	virtual const IPV4Address *getLocalHost() const = 0;
 	
+	virtual int connect(const IPV4Address& addr, int icePort) = 0;
+	virtual int disconnect() = 0;
+	
 	virtual int startTransmission() = 0;
 	
-	virtual void registerCallback(IUICallback *callback) = 0;
-	virtual void unregisterCallback() = 0;
+	virtual int registerCallback(ICallback *callback) = 0;
+	virtual int unregisterCallback(int id) = 0;
 	
-	virtual void setTransceiver(ITransceiver *transceiver) = 0;
-	virtual void unsetTransceiver() = 0;
-	
-	virtual void onACK(const CallParametersResponse&) = 0;
-	virtual void onNACK() = 0;
+	virtual int setTransceiver(ITransceiver *transceiver) = 0;
+	virtual int unsetTransceiver() = 0;
 };
 
 } /* namespace agh */

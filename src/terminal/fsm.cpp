@@ -29,20 +29,18 @@
 #include <iostream>
 #include <map>
 #include <Ice/Ice.h>
-#include <IceUtil/IceUtil.h>
 #include <cc++/address.h>
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/helpers/exception.h>
 
-
-
-#include "iface.h"
+#include <iface.h>
+#include "master.h"
 #include "restypes.h"
 #include "globals.h"
-#include "terminal.h"
-#include "states.h"
 #include "tools.h"
+#include "master.h"
+#include "transceiver.h"
 
 using namespace std;
 using namespace agh;
@@ -55,8 +53,78 @@ namespace agh {
 
 LoggerPtr logger(Logger::getLogger("MyApp"));
 
+class Terminal : public ISlave, public IMaster {
+protected:
+	const static string adapterName;
+	const static string remoteTerminalName;
+	const static int defaultIcePort;
+	const static int defaultRtpPort;
+
+	enum State {
+		DISCONNECTED,
+
+		PASSIVE_CONNECTED,
+		PASSIVE_OPERATIONAL,
+
+		ACTIVE_CONNECTED,
+		ACTIVE_OPERATIONAL
+	};
+
+	int codec;
+
+	int remotePort;
+	int localPort;
+
+	int remoteIcePort;
+	int localIcePort;
+
+	IPV4Address *localAddr;
+	IPV4Address *remoteAddr;
+
+	State currentState;
+
+	Ice::CommunicatorPtr ic;
+	Ice::ObjectAdapterPtr adapter;
+
+	ISlavePrx remoteTerminal;
+
+	ICallback* localCallback;
+	ITransceiver* transceiver;
+
+public:
+	Terminal(int lIcePort = defaultIcePort, int rIcePort = defaultIcePort);
+	virtual ~Terminal();
+
+	virtual bool isConnected() const;
+	virtual int setLocalPort(int port);
+	virtual int getLocalPort() const;
+	virtual int getDestinationPort() const;
+	virtual const IPV4Address* getRemoteHost() const;
+	virtual const IPV4Address* getLocalHost() const;
+	virtual int connect(const ost::IPV4Address&, int port);
+	virtual int disconnect();
+	virtual int startTransmission();
+	virtual int registerCallback(agh::ICallback* callback);
+	virtual int unregisterCallback(int id);
+	virtual int setTransceiver(agh::ITransceiver* trans);
+	virtual int unsetTransceiver();
+
+	virtual int remoteConnect(const Ice::Current& cur);
+	virtual int remoteDisconnect(int reason, const Ice::Current& cur);
+	virtual int remotePing(const Ice::Current& cur);
+	virtual prefferedCodecs remoteGetPrefferedOutgoingCodec(
+			const Ice::Current& cur);
+	virtual prefferedCodecs remoteGetPrefferedIncomingCodec(
+			const Ice::Current& cur);
+	virtual int remoteSetOutgoingCodec(Ice::Int, const Ice::Current& cur);
+	virtual int remoteResetOutgoingCodec(Ice::Int, const Ice::Current& cur);
+	virtual int remoteSetDestinationPort(Ice::Int, const Ice::Current& cur);
+	virtual int remoteGetDestinationPort(int port, const Ice::Current& cur);
+	virtual int remoteGetSourcePort(const Ice::Current& cur);
+	virtual int remoteStartTransmission(const Ice::Current& cur);
+};
+
 const string Terminal::adapterName("AGHPhoneAdapter");
-const string Terminal::adapterCallbackName("AGHPhoneCallbackAdapter");
 const string Terminal::remoteTerminalName("Slave");
 const int Terminal::defaultIcePort = 24474;
 const int Terminal::defaultRtpPort = 5004;
@@ -64,12 +132,10 @@ const int Terminal::defaultRtpPort = 5004;
 Terminal::Terminal(int lIcePort, int rIcePort) :
 	remotePort(defaultRtpPort), localPort(defaultRtpPort),
 			remoteIcePort(rIcePort), localIcePort(lIcePort), localAddr(0),
-			remoteAddr(0), currentState(States::DISCONNECTED), ic(0), adapter(0),
+			remoteAddr(0), currentState(DISCONNECTED), ic(0), adapter(0),
 			remoteTerminal(0), localCallback(0), transceiver(0),
 			codec(AudioCodec::PCMU) {
-	
-	cout << "Constructor" << endl;
-	
+
 	if ((remoteIcePort < 1024) || (remoteIcePort > 32768))
 		remoteIcePort = defaultIcePort;
 	if ((localIcePort < 1024) || (localIcePort > 32768))
@@ -83,39 +149,36 @@ Terminal::Terminal(int lIcePort, int rIcePort) :
 	ISlavePtr localTerminal = this;
 	adapter->add(localTerminal, ic->stringToIdentity(remoteTerminalName));
 	adapter->activate();
-	
+
 }
 
 Terminal::~Terminal() {
-	
-	//adapter->deactivate();
-	//adapter->destroy();
-	//ic->destroy();
-	
-	if (localAddr) {
+	if (ic)
+		ic->destroy();
+	if (localAddr)
 		delete localAddr;
-	}
-	if (remoteAddr) {
+	if (remoteAddr)
 		delete remoteAddr;
-	}
 }
 
 bool Terminal::isConnected() const {
-	return currentState != States::DISCONNECTED;
+	return currentState != DISCONNECTED;
 }
 
-void Terminal::setLocalRtpPort(int port) {
+int Terminal::setLocalPort(int port) {
 	if ((port < 1024) || (port > 32768)) {
+		return 0;
 	} else {
 		localPort = port;
+		return 0;
 	}
 }
 
-int Terminal::getLocalRtpPort() const {
+int Terminal::getLocalPort() const {
 	return localPort;
 }
 
-int Terminal::getDestinationRtpPort() const {
+int Terminal::getDestinationPort() const {
 	return remotePort;
 }
 
@@ -128,34 +191,34 @@ const IPV4Address* Terminal::getLocalHost() const {
 }
 
 //TODO: Implement
-void Terminal::connect(const IPV4Address& addr, int port) {
+int Terminal::connect(const IPV4Address& addr, int port) {
 	stringstream a;
 	a << addr;
 	LOG4CXX_DEBUG(logger, string("Terminal::connect(") << a.str() << ", " << port << ")");
-	
-	if (currentState != States::DISCONNECTED) {
+
+	if (currentState != DISCONNECTED) {
 		LOG4CXX_INFO(logger, "Already connected");
-		throw TerminalBusyException();
+		return ConnectResult::ALREADY_CONNECTED;
 	}
-	
+
 	if (!addr.isInetAddress()) {
 		LOG4CXX_ERROR(logger, "Incorrect address: " << a.str());
-		//TODO: another Exception
-		throw VoipException();
+		return ConnectResult::INVALID_HOST;
 	}
-	
+
 	if ((port < 1024) || (port > 32768)) {
 		LOG4CXX_ERROR(logger, "Incorrect or out of range port number: " << port);
-		//TODO: Another Exception
-		throw VoipException();
+		return ConnectResult::INVALID_HOST;
 	}
-	
+
 	if (remoteAddr)
 		delete remoteAddr;
 	remoteAddr = new IPV4Address(addr);
 	remoteIcePort = port;
+	
 	localAddr = new IPV4Address("0.0.0.0");
 	
+
 	stringstream remoteEndpoint;
 	remoteEndpoint << remoteTerminalName << ":default"; 
 	remoteEndpoint << " -h " << remoteAddr->getAddress();
@@ -164,52 +227,42 @@ void Terminal::connect(const IPV4Address& addr, int port) {
 	LOG4CXX_DEBUG(logger, "Remote Endpoint: \"" << remoteEndpoint.str() << "\"");
 
 	LOG4CXX_DEBUG(logger, "Accessing remote object");
+
 	Ice::ObjectPrx base = ic->stringToProxy(remoteEndpoint.str());
 	remoteTerminal = ISlavePrx::checkedCast(base);
+
 	LOG4CXX_DEBUG(logger, "Successfully received remote object");
 
 	LOG4CXX_DEBUG(logger, "Calling remote site");
-	//TODO: Do smth w params
-	CallParameters params;
-	
-	masterCallbackPtr = new MasterCallbackImpl((IMaster*) this);
-	Ice::ObjectAdapterPtr tmpAdapter;
-	tmpAdapter = ic->createObjectAdapter("");
-	Ice::Identity tmpIdentity;
-	tmpIdentity.name = IceUtil::generateUUID();
-	tmpIdentity.category = "";
-	
-	tmpAdapter->add(masterCallbackPtr, tmpIdentity);
-	tmpAdapter->activate();
-	remoteTerminal->ice_getConnection()->setAdapter(tmpAdapter);
-	
-	this->changeState(States::ACTIVE_CONNECTED);
-	remoteTerminal->remoteTryConnect(params, tmpIdentity);
-	
-	// change state
-	cout << "AAAAAAAAAAAAAAAAAAAAAA\n";
-	
+	int res = remoteTerminal->remoteConnect();
 
-	
-}
+	switch (res) {
+	case RequestConnectResult::BUSY:
+		LOG4CXX_DEBUG(logger, "Remote site busy");
+		return ConnectResult::BUSY;
+	case RequestConnectResult::REJECTED:
+		LOG4CXX_DEBUG(logger, "Remote site rejected connection");
+		return ConnectResult::REJECTED;
+	case RequestConnectResult::INTERNAL_ERROR:
+		LOG4CXX_ERROR(logger, "Internal Error");
+		return ConnectResult::INTERNAL_ERROR;
+	}
 
-void Terminal::changeState(int newState) {
-	stringstream a;
-	LOG4CXX_DEBUG(logger, "Terminal::changeState()");
-	
-	if (this->localCallback != 0) {
-			// TODO inform UI, UI needs to be implemented first
-			localCallback->onStateTransition(currentState, newState, *localAddr);
-		}
-	a << string("Terminal::changeState() prev: ") << this->currentState << " new: " << newState;
-	LOG4CXX_DEBUG(logger, a.str());
-	this->currentState = newState;
+	if (res != RequestConnectResult::SUCCESS) {
+		LOG4CXX_FATAL(logger, "General error");
+		return ConnectResult::OTHER;
+	}
+
+	LOG4CXX_DEBUG(logger, "Transition to ACTIVE_CONNECTED state");
+	currentState = ACTIVE_CONNECTED;
+
+	// TODO: Add connection monitor (heartbeat)
 }
 
 int Terminal::startTransmission() {
 	LOG4CXX_DEBUG(logger, "Terminal::startTransmission()");
 	if (transceiver) {
-		if (currentState != States::ACTIVE_CONNECTED) {
+		if (currentState != ACTIVE_CONNECTED) {
 			LOG4CXX_ERROR(logger, "Not connected or transmission already set");
 			return -1;
 		}
@@ -221,9 +274,7 @@ int Terminal::startTransmission() {
 		transceiver->setLocalEndpoint(*localAddr, localPort);
 		transceiver->setRemoteEndpoint(*remoteAddr, remotePort);
 
-		int res = 0;
-		//int res = transceiver->start();
-		cout << "TRANSCEIVER STARTED";
+		int res = transceiver->start();
 
 		// TODO: switch to smarter error handling mechanism (like other methods)
 		if (res != 0) {
@@ -231,7 +282,7 @@ int Terminal::startTransmission() {
 			return res;
 		}
 
-		//res = remoteTerminal->remoteStartTransmission();
+		res = remoteTerminal->remoteStartTransmission();
 
 		//TODO: change error mechanism
 		if (res != 0) {
@@ -240,7 +291,7 @@ int Terminal::startTransmission() {
 		}
 
 		LOG4CXX_DEBUG(logger, "Transition to ACTIVE_OPERATIONAL state");
-		changeState(States::ACTIVE_OPERATIONAL);
+		currentState = ACTIVE_OPERATIONAL;
 
 		return 0; //TODO: change error mechanism
 	}
@@ -248,120 +299,34 @@ int Terminal::startTransmission() {
 	return -1; //TODO: change error mechanism
 }
 
-void Terminal::disengage() {
+int Terminal::disconnect() {
 	LOG4CXX_DEBUG(logger, "Terminal::disconnect()");
-	if (currentState != States::DISCONNECTED) {
+	if (currentState != DISCONNECTED) {
 		// TODO: stop trasmission (Transceiver component needed first
 		LOG4CXX_DEBUG(logger, "Transition to DISCONNECTED state");
-		currentState == States::DISCONNECTED;
+		currentState == DISCONNECTED;
 	}
+	return DisconnectResult::SUCCESS;
 }
 
-void Terminal::registerCallback(agh::IUICallback* callback) {
+// TODO: switch to smarter mechanism?
+int Terminal::registerCallback(agh::ICallback* callback) {
 	localCallback = callback;
 }
 
-void Terminal::unregisterCallback() {
+int Terminal::unregisterCallback(int s) {
 	localCallback = 0;
 }
 
-void Terminal::setTransceiver(agh::ITransceiver* trans) {
+int Terminal::setTransceiver(agh::ITransceiver* trans) {
 	transceiver = trans;
 }
 
-void Terminal::unsetTransceiver() {
+int Terminal::unsetTransceiver() {
 	transceiver = 0;
 }
 
-TerminalCapabilities Terminal::remoteGetCapabilities(const ::Ice::Current& curr) {
-	
-}
-
-void Terminal::remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr) {
-	stringstream a;
-	LOG4CXX_DEBUG(logger, string("Terminal::remoteTryConnect()"));
-	masterCallbackPrx = IMasterCallbackPrx::uncheckedCast(curr.con->createProxy(ident));
-	
-	if (localAddr) {
-		delete localAddr;
-	}
-	if (remoteAddr) {
-		delete remoteAddr;
-	}
-	remoteAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
-	localAddr = new IPV4Address(getLocalAddressFromConnection(curr.con));
-	
-	changeState(States::PASSIVE_CONNECTED);
-}
-
-void Terminal::remoteStartTransmission(const ::Ice::Current& curr) {
-	cout << "XXXX\n";
-	cout.flush();
-	LOG4CXX_DEBUG(logger, string("Terminal::remoteStartTransmission()"));
-	
-	if (this->currentState != States::PASSIVE_CONNECTED) {
-		LOG4CXX_DEBUG(logger, string("Terminal::remoteStartTransmission() bad state"));
-	} else {
-		changeState(States::PASSIVE_OPERATIONAL);
-
-		cout << "TRANSCEIVER STARTED\n";
-		
-		// TODO start RTP.RTCP transmission
-		LOG4CXX_DEBUG(logger, string("Terminal::remoteStartTransmission() transmission started"));
-	}
-}
-
-void Terminal::remoteDisengage(const ::Ice::Current& curr) {
-	 
- }
-
-void Terminal::onACK(const ::agh::CallParametersResponse& param) {
-	LOG4CXX_DEBUG(logger, string("Terminal::onACK()"));
-	
-	if (this->currentState != States::ACTIVE_CONNECTED) {
-		LOG4CXX_DEBUG(logger, string("Terminal::onACK() bad state"));
-	} else {
-		remotePort = param.slaveRtpPort;
-		
-		cout << "XXXX:" << remotePort << endl;
-		if (remotePort <= 1024 || remotePort >= 32765 ) {
-// 			throw VoipException(); TODO
-		}
-		
-		stringstream a;
-		a << "Terminal::onACK() " << "localH: " << *localAddr << " localP:" << localPort \
-			<< " remoteH: " << *remoteAddr << " remoteP: "<<  remotePort;
-		LOG4CXX_DEBUG(logger, a.str());
-		
-		// perform connection
-		remoteTerminal->remoteStartTransmission();
-		LOG4CXX_DEBUG(logger, string("Terminal::onACK() starting transmission"));
-// 		this->startTransmission();
-		
-		cout << "Before change state\n";
-		changeState(States::ACTIVE_OPERATIONAL);
-		cout << "After change state\n";
-	}
-}
-
-void Terminal::onNACK() {
-	cout << "onNAck received\n";
-}
-
-MasterCallbackImpl::MasterCallbackImpl(IMaster *master) : master(master) {
-}
-
-void MasterCallbackImpl::remoteTryConnectAck(const ::agh::CallParametersResponse& param, const ::Ice::Current& curr) {
-	master->onACK(param);
-}
-
-void MasterCallbackImpl::remoteTryConnectNack(const ::Ice::Current& curr) {
-	master->onNACK();
-}
-
-
-/*
-int Terminal::remoteTryConnect(const Ice::Current& cur) {
+int Terminal::remoteConnect(const Ice::Current& cur) {
 	LOG4CXX_DEBUG(logger, "Terminal::remoteConnect()");
 	if (currentState == DISCONNECTED) {
 		if (localCallback && !localCallback->onIncomingCall(*remoteAddr))
@@ -381,7 +346,7 @@ int Terminal::remoteTryConnect(const Ice::Current& cur) {
 	}
 }
 
-int Terminal::remoteDisengage(int reason, const Ice::Current& cur) {
+int Terminal::remoteDisconnect(int reason, const Ice::Current& cur) {
 	LOG4CXX_DEBUG(logger, "Terminal::remoteDisconnect(" << reason << ")");
 	if (currentState != DISCONNECTED) {
 		LOG4CXX_DEBUG(logger, "Transition to DISCONNECTED state");
@@ -389,11 +354,9 @@ int Terminal::remoteDisengage(int reason, const Ice::Current& cur) {
 	return DisconnectResult::SUCCESS;
 }
 
-
 int Terminal::remotePing(const Ice::Current& cur) {
 	//TODO: To be implemented
 }
-
 
 prefferedCodecs Terminal::remoteGetPrefferedOutgoingCodec(
 		const Ice::Current& cur) {
@@ -461,9 +424,61 @@ int Terminal::remoteStartTransmission(const Ice::Current& cur) {
 	LOG4CXX_DEBUG(logger, "No transceiver");
 	return -1; //TODO: change error mechanism
 }
-*/
 
 } /* namespace agh */
 
+int main(int argc, char *argv[]) {
+/*	
+//	try {
+		// Set up a simple configuration that logs on the console.
+		BasicConfigurator::configure();
+//	} catch(log4cxx::helpers::Exception& e) {
+//		clog << e.what() << endl;
+//	}
 
+	int port;
+
+	cout << audioCodecChannels[AudioCodec::L16_STEREO] << endl;
+	cout << audioCodecChannels[AudioCodec::MPA] << endl;
+
+	cout << audioCodecClockRate[AudioCodec::DVI4_22050] << endl;
+	cout << audioCodecClockRate[AudioCodec::MPA] << endl;
+
+	if (argc > 1) {
+		// slave test
+		port = 8347;
+	} else {
+		// master test
+		port = 8348;
+	}
+	Terminal *app = new Terminal(port); 
+
+	if (argc > 1) {
+		app->connect("localhost", 8348);
+		app->startTransmission();
+	} else {
+
+	}
+
+	LOG4CXX_DEBUG(logger, "Ala ma kota");
+
+	sleep(6000);
+	*/
+
+	TransceiverAlsa *itr = new TransceiverAlsa();
+	itr->setLocalEndpoint(argv[1], atoi(argv[2]));
+	itr->setRemoteEndpoint(argv[3], atoi(argv[4]));
+	
+	if(argc >= 6)
+		itr->setInputDevice(argv[5]);
+	if(argc >= 7)
+		itr->setOutputDevice(argv[6]);
+		
+	itr->start();
+	
+	cout << "Press any key to exit..." << endl;
+	cin.get();
+	
+	delete itr;
+}
 
