@@ -25,6 +25,7 @@
 #include <Ice/Ice.h>
 #include <Ice/Identity.h>
 
+#include "icecommon.h"
 #include "master.h"
 #include "states.h"
 
@@ -88,6 +89,7 @@ public:
 	virtual void unregisterCallback();
 	virtual void setTransceiver(ITransceiver *transceiver);
 	virtual void unsetTransceiver();
+	IMasterCallbackPrx getMasterCallback() { return masterCallbackPrx; }
     
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);
 

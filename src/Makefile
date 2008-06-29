@@ -13,7 +13,7 @@ bin_dir := ../bin
 CXX := g++
 CXXFLAGS = -Wall -ansi -pedantic -g -I. -D__UNIX $(addprefix -I ,$(include_dirs))
 LDFLAGS = -lIce -lm -lccgnu2 -lboost_regex -llog4cxx -lportaudio -lccrtp1
-SLICEFLAGS = -I /usr/share/Ice/slice/
+SLICEFLAGS = -I /usr/share/slice/
 SLICE := slice2cpp ${SLICEFLAGS}
 vpath %.h $(include_dirs)
 

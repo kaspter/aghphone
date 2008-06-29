@@ -33,6 +33,7 @@
 #include "globals.h"
 #include "tools.h"
 #include "terminal.h"
+#include "dummyui.h"
 
 using namespace std;
 using namespace agh;
@@ -44,19 +45,24 @@ int main(int argc, char *argv[]) {
 		// Set up a simple configuration that logs on the console.
 		BasicConfigurator::configure();
 	} catch(log4cxx::helpers::Exception& e) {
-		clog << e.what() << endl;
+		//clog << e.what() << endl;
 	}
+	
+	int portL = atoi(argv[1]);
+	int portR = atoi(argv[2]);
+	
+	DummyUI *dummy = new DummyUI(portL, portR);
 
-	Terminal *term;
-
-	if (argc > 1) {
-		term = new Terminal(3000, 4000);
-	} else {
-		term = new Terminal(4000, 3000);
-		term->connect("127.0.0.1", 3000);
-	}
-	int g;
-	cin >> g;
+// 	Terminal *term;
+// 
+// 	if (argc > 1) {
+// 		term = new Terminal(
+// 	} else {
+// 		term = new Terminal(4000, 3000);
+// 		term->connect("127.0.0.1", 3000);
+// 	}
+// 	int g;
+// 	cin >> g;
 }
 
 /*

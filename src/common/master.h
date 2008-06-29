@@ -23,6 +23,7 @@
 #define __MASTER_H__INCLUDED__
 
 #include "transceiver.h"
+#include "icecommon.h"
 #include "states.h"
 #include <cc++/address.h>
 
@@ -61,7 +62,7 @@ public:
 	virtual void setTransceiver(ITransceiver *transceiver) = 0;
 	virtual void unsetTransceiver() = 0;
 	
-	virtual void onACK(const ::agh::CallParametersResponse&) = 0;
+	virtual void onACK(const CallParametersResponse&) = 0;
 	virtual void onNACK() = 0;
 };
 
