@@ -7,6 +7,12 @@
 #include "transport.h"
 
 namespace agh {
+	
+char sgn(char x) {
+	if (x < 0) return -1;
+	else if (x == 0) return 0;
+	else return 1;
+}
 
 MixerCore::MixerCore(map<string, TerminalInfo*>* remoteHosts) {
 	this->remoteHosts = remoteHosts;
@@ -177,7 +183,7 @@ void MixerCore::run() {
 		}
 		
 		if (count > 0) {
-			// sum
+			// mix original solution
 			for (int i = 0; i < packetSize; i++) {
 				overallBuf[i] = 0; 
 				int pCount = count;
@@ -188,6 +194,54 @@ void MixerCore::run() {
 				if (pCount != 0)
 					overallBuf[i] /= pCount;
 			}
+			
+// 			// mix Align-to-Average Weighted AAW
+// 			for (int i = 0; i < packetSize; i++) {
+// 				overallBuf[i] = 0; 
+// 				for (int j = 0; j < count; j++) {
+// 					overallBuf[i] += bufs[j][i];
+// 				}
+// 				overallBuf[i] /= count;
+// 			}
+			
+// 			// mix Align-to-Greatest Weighted AGW
+// 			char totalMax = 0;
+// 			char mixedMax = 0;
+// 			for (int i = 0; i < packetSize; i++) {
+// 				overallBuf[i] = 0; 
+// 				for (int j = 0; j < count; j++) {
+// 					if (bufs[j][i] > totalMax) totalMax = bufs[j][i];
+// 					overallBuf[i] += bufs[j][i];
+// 				}
+// 				overallBuf[i] /= count;
+// 				if (overallBuf[i] > mixedMax) mixedMax = overallBuf[i];
+// 			}
+// 			char u = 1; // factor used to adjust the amplitude
+// 			for (int i = 0; i < packetSize; i++) {
+// 				overallBuf[i] = overallBuf[i]*u*totalMax/mixedMax;
+// 			}
+			
+// 			// mix Align-to-Self Weighted ASW
+// 			for (int i = 0; i < packetSize; i++) {
+// 				overallBuf[i] = 0; 
+// 				char sum = 0;
+// 				for (int j = 0; j < count; j++) {
+// 					overallBuf[i] += bufs[j][i]*bufs[j][i]*sgn(bufs[j][i]);
+// 					sum += abs(bufs[j][i]);
+// 				}
+// 				overallBuf[i] /= sum;
+// 			}
+			
+// 			// mix Align-to-Energy Weighted AEW
+// 			for (int i = 0; i < packetSize; i++) {
+// 				overallBuf[i] = 0; 
+// 				char sum = 0;
+// 				for (int j = 0; j < count; j++) {
+// 					overallBuf[i] += bufs[j][i]*bufs[j][i]*bufs[j][i];
+// 					sum += abs(bufs[j][i])*abs(bufs[j][i]);
+// 				}
+// 				overallBuf[i] /= sum;
+// 			}
 			
 			buffer->putData(overallBuf, packetSize);
 			cout << "putted in buffor" << endl;
