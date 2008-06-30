@@ -68,7 +68,7 @@ int ILBC20::decode(char *dest, char *src, int srcsize) {
 		}
 		((short *) dest)[i] = (short) t;
 	}
-	return iLBCenc_inst.blockl;
+	return 320;
 }
 
 }
