@@ -206,7 +206,7 @@ int Terminal::startTransmission() {
 		transceiver->setCodec(-1); //dummycodec
 		transceiver->setLocalEndpoint(*localAddr, localRTPPort);
 		transceiver->setRemoteEndpoint(*remoteAddr, remoteRTPPort);
-		transceiver->start();
+		//transceiver->start();
 
 		//int res = 0;
 		stringstream a;

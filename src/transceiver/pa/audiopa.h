@@ -19,11 +19,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TRANSCEIVERPA_H__INCLUDED__
-#define __TRANSCEIVERPA_H__INCLUDED__
+#ifndef __AUDIOPA_H__INCLUDED__
+#define __AUDIOPA_H__INCLUDED__
 
 #include "device.h"
 #include "aghrtpsession.h"
+#include "audio.h"
 #include "transceiver.h"
 #include "devicefactorypa.h"
 #include <cc++/address.h>
@@ -33,83 +34,76 @@ using namespace ost;
 
 namespace agh {
 
-typedef struct {
-	sampleType *inputBuffer;
-	sampleType *outputBuffer;
-	bool outputReady;
-	bool inputReady;
-	AghRtpSession *socket;
-	int packetCounter;
-	sampleType ringBuffer[RING_BUFFER_SIZE];
-	sampleType *ringBufferEnd;
-	int ringBufferWriteIndex;
-	int ringBufferReadIndex;
-} CallbackData; 
-
-class TransceiverPa;
-	
-class TransmitterCore : public Thread, public TimerPort {
-	TransceiverPa* t;
-	
-public:
-	TransmitterCore(TransceiverPa* tpa);
-	~TransmitterCore();
-	
-	void run();
-};
-
-class ReceiverCore : public Thread, public TimerPort {
-	TransceiverPa* t;
-	
-public:
-	ReceiverCore(TransceiverPa* tpa);
-	~ReceiverCore();
-	
-	void run();
-};
-
-class TransceiverPa : public ITransceiver {
+class AudioPa : public Audio {
 private:
-
-	friend class TransmitterCore;
-	friend class ReceiverCore;
-
+	Transceiver *t;
+	
 	DeviceFactoryPa* devMgr;
 	const IDevice* inputDevice;
 	const IDevice* outputDevice;
 	
-	IPV4Address localAddress;
-	int localPort;
-	IPV4Address remoteAddress;
-	int remotePort;
+	RingBuffer *outputBuffer;
+	RingBuffer *inputBuffer;
+
+	long framesPerBuffer;
+	float sampleRate;
+	int jitterMult;
 	
-	PaStream* inputStream;
-	PaStream* outputStream;
-	//PaStream* stream;
-	CallbackData cData;
-	AghRtpSession *socket;
-	
-	TransmitterCore *tCore;
-	ReceiverCore *rCore;
-	
-	int framesPerBuffer;
-	
+	PaStream* inputStream, *outputStream, *stream;
+
 	void openStream();
 public: 
-	TransceiverPa();
-	~TransceiverPa();
+	AudioPa(Transceiver *t);
+	~AudioPa();
+	void setTransceiver(Transceiver *t);
 	vector<IDevice*> getAvailableInputDevices() const;
 	vector<IDevice*> getAvailableOutputDevices() const;
 	int setInputDevice(const IDevice& dev);
 	int setOutputDevice(const IDevice& dev);
 	int setInputDevice(const int id);
 	int setOutputDevice(const int id);
-	int setCodec(int codec);
-	int setLocalEndpoint(const IPV4Address& addr, int port);
-	int setRemoteEndpoint(const IPV4Address& addr, int port);
+	int setInputDevice(const string& name) { return 0; }
+	int setOutputDevice(const string& name) { return 0; }
+
+	void setSampleRate(float rate) { sampleRate = rate; }
+
+	/*
+	 * sets size of a data chunk that will be read from buffer with getData()
+	 * @param size size of the packet [B]  
+	 */
+	void setPacketSize(long size) { framesPerBuffer = size; }
+	
+	/*
+	 * sets a value that will be multiplied by a packet size (see setPacketSize())
+	 * to form a minimum number of bytes in the buffer that will cause the audio thread
+	 * to invoke callback on the transceiver
+	 * @param m the multiplier
+	 */
+	void setJitterMultiplier(int m) { jitterMult = m; }
 	
 	int start();
 	int stop();
+	
+	/*
+	 * gets data from audio input, it will copy data from the input buffer to the
+	 * memory region pointed by dest, size of the requested data is set with setPacketSize
+	 * @param[out] dest pointer to the memory region to which data is to be copied
+	 * @param size size in bytes of the data to be put in the dest
+	 */
+	bool getData(void* dest, long size);
+	
+	/*
+	 * puts data into the output buffer
+	 * @param[in] src pointer to the memory region from which data is to be read
+	 * @param size size of the data [B]
+	 */
+	
+	void putData(void* src, long size);
+	
+	void moveData(RingBuffer* dest, long size);
+	
+	void flush();
+	void read();
 };
 
 } /* namespace agh */
