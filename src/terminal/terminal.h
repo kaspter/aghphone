@@ -29,6 +29,7 @@
 #include "transceiver.h"
 #include "master.h"
 #include "states.h"
+#include "globals.h"
 
 namespace agh {
 
@@ -92,6 +93,9 @@ public:
 	virtual void unsetTransceiver();
 	IMasterCallbackPrx getMasterCallback() { return masterCallbackPrx; }
     
+	void setAudioCodec(int codecID) { codec = codecID; }
+	int getAudioCodec() { return codec; } 
+	
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);
 
     virtual void remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr);
