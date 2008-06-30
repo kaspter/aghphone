@@ -22,6 +22,7 @@
 #include "audio.h"
 #include "transport.h"
 #include "audioalsa.h"
+#include "audiopa.h"
 #include "transportccrtp.h"
 #include "transceiverfactory.h"
 #include <string>
@@ -47,7 +48,7 @@ Transceiver* TransceiverFactory::getTransceiver(const string& audio, const strin
 	if(audio == "alsa") {
 		a = new AudioAlsa(transceiver);
 	} else if(audio == "pa") {
-		a = new AudioAlsa(transceiver);
+		a = new AudioPa(transceiver);
 	} else {
 		return NULL;
 	}

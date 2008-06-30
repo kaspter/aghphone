@@ -5,7 +5,7 @@ extra_clean :=
 
 objects = $(subst .c,.o,$(subst .cpp,.o,$(sources)))
 
-include_dirs := common ice directory terminal transceiver common/codecs gui transceiver/alsa transceiver/ccrtp common/codecs mixer
+include_dirs := common ice directory terminal transceiver common/codecs gui transceiver/alsa transceiver/pa transceiver/ccrtp common/codecs mixer
 
 bin_dir := ../bin
 
@@ -38,7 +38,7 @@ include terminal/module.mk
 include transceiver/module.mk
 include transceiver/alsa/module.mk
 include transceiver/ccrtp/module.mk
-#include transceiver/pa/module.mk
+include transceiver/pa/module.mk
 include common/codecs/module.mk
 include gui/module.mk
 include mixer/module.mk

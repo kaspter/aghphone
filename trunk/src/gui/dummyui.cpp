@@ -48,7 +48,7 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 	terminal->registerCallback(this);
 	
 	TransceiverFactory factory;
-	Transceiver* transceiver = factory.getTransceiver("pa", "ccrtp");
+	Transceiver* transceiver = factory.getTransceiver("alsa", "ccrtp");
 	
 	terminal->setTransceiver(transceiver);
 	
