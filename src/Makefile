@@ -41,13 +41,13 @@ include transceiver/ccrtp/module.mk
 include transceiver/pa/module.mk
 include common/codecs/module.mk
 include gui/module.mk
-#include gui/qt/module.mk
+include gui/qt/module.mk
 include mixer/module.mk
 include common/codecs/legacy/g711/module.mk
 include common/codecs/legacy/ilbc/module.mk
 
 .PHONY: all
-all: includedirs ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)
+all: ice/icecommon.o directory/directory.ice ice/iface.o  $(programs)
 
 .PHONY: libraries
 libraries: $(libraries)
@@ -60,9 +60,6 @@ clean:
 #ifneq "$(MAKECMDGOALS)" "clean"
 #	include $(dependencies)
 #endif
-
-includedirs:
-	echo $(include_dirs) > gui/qt/includedirs
 
 %.o: %.cpp
 	$(ECHO_COMPILE)
