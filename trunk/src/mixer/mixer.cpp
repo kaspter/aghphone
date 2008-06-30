@@ -175,6 +175,7 @@ void Mixer::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::I
 	info->incomingCodec = params.incomingCodec.id;
 	info->transport = NULL;
 	info->readedSize = 0;
+	info->buf = NULL;
 	remoteHostsM[tmpAddr->getHostname()] = info; 
 	a << "Mixer::remoteTryConnect() conf received, remote addr: " << tmpAddr << " port: " << params.masterRtpPort;
  	LOG4CXX_DEBUG(logger, a.str());
@@ -193,9 +194,14 @@ void Mixer::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::I
 }
 
 void Mixer::remoteStartTransmission(const ::Ice::Current& curr) {
+	stringstream a;
+	stringstream b;
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission()"));
 	
  	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
+	a << string("Mixer::remoteStartTransmission() rem hostAddr: ") << tmpAddr->getHostname();
+	LOG4CXX_DEBUG(logger, a.str());
+	
 	TerminalInfo *info = remoteHostsM[tmpAddr->getHostname()];
 	if (remoteHostsM.find(tmpAddr->getHostname()) == remoteHostsM.end()  ) {
 		cout << "ERROR info not found\n";
@@ -219,7 +225,9 @@ void Mixer::remoteStartTransmission(const ::Ice::Current& curr) {
 		info->transport->setParams(codecInc->getFrameCount(), codecInc->getFrameSize());
 		info->transport->setLocalEndpoint("0.0.0.0", localRTPPort);
 		info->transport->setRemoteEndpoint(info->address, info->rtpPort);
-		info->buf = new RingBuffer(1024*1024*1024, 1);
+		info->buf = new RingBuffer(1024*1024, 1);
+// 		b << "Mixer::remoteStartTransmission() creating transport, 
+  		localRTPPort += 2;
 		
 		stringstream a;
 		a << "rem address: " << info->address << " port: " << info->rtpPort;
