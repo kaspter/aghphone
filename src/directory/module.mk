@@ -10,7 +10,7 @@ directory/directory.cpp: directory/directory.ice ice/icecommon.cpp
 
 programs += $(bin_dir)/directory
 
-$(bin_dir)/directory: directory/directory.o ice/icecommon.o $(local_objs) 
+$(bin_dir)/directory: directory/directory.o common/tools.o ice/icecommon.o $(local_objs) 
 		$(ECHO_COMPILE_EXEC)
 		$(CXX) $(LDFLAGS) -o $@ $^
 

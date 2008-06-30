@@ -11,7 +11,7 @@ module agh {
 	
 	interface Directory {
 	
-		void registerTerminal(TerminalAddress terminal)
+		void registerTerminal(TerminalAddress address)
 			throws BadLoginException, TerminalExistsException;
 		void removeTerminal(string name)
  			throws NoSuchTerminalException;
