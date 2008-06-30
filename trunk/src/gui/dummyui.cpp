@@ -116,9 +116,11 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 				std::ostringstream o;
 				o << string("127.0.0.1") << this->lIcePort;
 				address.name = o.str();
+				
 				std::ostringstream o2;
 				o2 << string("") << this->lIcePort;
 				address.port = o2.str();
+				
 				address.ipAddress = string("127.0.0.1");
 				
 				try {

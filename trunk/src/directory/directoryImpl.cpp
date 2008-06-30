@@ -1,10 +1,13 @@
 #include <Ice/Ice.h>
 #include <map>
+#include <cc++/address.h>
 #include "../ice/icecommon.h"
 #include "directory.h"
+#include "tools.h"
 
 using namespace std;
 using namespace agh;
+using namespace ost;
 
 class DirectoryImpl : public Directory
 {
@@ -12,8 +15,8 @@ class DirectoryImpl : public Directory
 		map<string, TerminalAddress> terminals;
 	public:
 		virtual void registerTerminal(const TerminalAddress& address, const Ice::Current&);
-		virtual void removeTerminal(const string& address, const Ice::Current&);
-		virtual TerminalAddress findTerminal(const string& address, const Ice::Current&);
+		virtual void removeTerminal(const string& name, const Ice::Current&);
+		virtual TerminalAddress findTerminal(const string& name, const Ice::Current&);
 		virtual Terminals getTerminals(const Ice::Current&);
 };
 
@@ -28,37 +31,45 @@ Terminals DirectoryImpl::getTerminals(const Ice::Current&) {
 	return retTerminals;
 }
 
-void DirectoryImpl::registerTerminal(const TerminalAddress& address, const Ice::Current&) {
-	if (address.name == "") {
+void DirectoryImpl::registerTerminal(const TerminalAddress& address, const Ice::Current& curr) {
+	
+	IPV4Address *remoteAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
+	
+	TerminalAddress newAddress;
+	newAddress.name = address.name;
+	newAddress.ipAddress = remoteAddr->getHostname();
+	newAddress.port = address.port;
+	
+	if (newAddress.name == "") {
 		throw BadLoginException();
 	}
-	if (terminals.count(address.name) > 0) {
+	if (terminals.count(newAddress.name) > 0) {
 		throw TerminalExistsException();
 	}
 	
-	terminals[address.name] = address;
+	terminals[remoteAddr->getHostname()] = newAddress;
 	
-	cout << address.name << " successfully registered" << endl;
+	cout << newAddress.name << " successfully registered [" << newAddress.ipAddress << ":" << newAddress.port << "]" << endl;
 }
 
-void DirectoryImpl::removeTerminal(const string& address, const Ice::Current&) {
+void DirectoryImpl::removeTerminal(const string& name, const Ice::Current&) {
 	
-	if (terminals.count(address) <= 0) {
+	if (terminals.count(name) <= 0) {
 		throw NoSuchTerminalException();
 	}
 	
-	terminals.erase(address);
+	terminals.erase(name);
 	
-	cout << address << " successfully unregistered" << endl;
+	cout << name << " successfully unregistered" << endl;
 }
 
-TerminalAddress DirectoryImpl::findTerminal(const string& address, const Ice::Current&) {
+TerminalAddress DirectoryImpl::findTerminal(const string& name, const Ice::Current&) {
 	
-	if (terminals.count(address) <= 0) {
+	if (terminals.count(name) <= 0) {
 		throw NoSuchTerminalException();
 	}
 	
-	TerminalAddress retAddress = terminals[address];
+	TerminalAddress retAddress = terminals[name];
 	
 	return retAddress;
 }
