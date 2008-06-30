@@ -56,7 +56,7 @@ int GSM::encode(char *dest, char *src) {
 
 int GSM::decode(char *dest, char *src, int srcsize) {
 	::gsm_decode(r, (::gsm_byte *) src, (::gsm_signal *) dest);
-	return getFrameCount();
+	return 320;
 }
 
 }
