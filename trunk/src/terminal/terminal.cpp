@@ -63,7 +63,7 @@ Terminal::Terminal(int lIcePort) :
 	remoteRTPPort(0), localRTPPort(defaultRtpPort), localIcePort(lIcePort),
 			localAddr(0), remoteAddr(0), currentState(States::DISCONNECTED),
 			ic(0), adapter(0), remoteTerminal(0), localCallback(0),
-			transceiver(0), codec(AudioCodec::PCMU) {
+			transceiver(0), codec(AudioCodec::ILBC_20) {
 
 	cout << "Constructor" << endl;
 
@@ -163,9 +163,15 @@ void Terminal::connect(const IPV4Address& addr, int remoteIcePort) {
 	LOG4CXX_DEBUG(logger, "Successfully received remote object");
 
 	LOG4CXX_DEBUG(logger, "Calling remote site");
-	//TODO: Do smth w params codecs incoming & outgoings
+	
+	// TODO retrieve codecs and choose the best
 	CallParameters params;
 	params.masterRtpPort = localRTPPort;
+	ICodec codecOut, codecIn;
+	codecOut.id = codec;
+	codecIn.id = codec;
+	params.outgoingCodec = codecOut;
+	params.incomingCodec = codecIn;
 
 	masterCallbackPtr = new MasterCallbackImpl((IMaster*) this);
 	Ice::ObjectAdapterPtr tmpAdapter;
@@ -203,7 +209,7 @@ int Terminal::startTransmission() {
 			return -1;
 		}
 		//TODO: set codec
-		transceiver->setCodec(-1); //dummycodec
+		transceiver->setCodec(codec); //dummycodec
 		transceiver->setLocalEndpoint(*localAddr, localRTPPort);
 		transceiver->setRemoteEndpoint(*remoteAddr, remoteRTPPort);
 		//transceiver->start();
@@ -281,7 +287,8 @@ void Terminal::remoteTryConnect(const ::agh::CallParameters& params,
 	localAddr = new IPV4Address(getLocalAddressFromConnection(curr.con));
 
 	remoteRTPPort = params.masterRtpPort;
-	// TODO read & set codec (already choosen by master)
+	codec = params.incomingCodec.id;
+// 	codecOut = params.outgoingCodec.id;
 
 	changeState(States::PASSIVE_CONNECTED);
 }
@@ -295,9 +302,9 @@ void Terminal::remoteStartTransmission(const ::Ice::Current& curr) {
 		changeState(States::PASSIVE_OPERATIONAL);
 
 		stringstream a;
-		a << "Starting passive transceiver :: " << *localAddr << ":" << localRTPPort << " <-> " << *remoteAddr << ":" << remoteRTPPort;
+		a << "Starting passive transceiver :: " << *localAddr << ":" << localRTPPort << " <-> " << *remoteAddr << ":" << remoteRTPPort << " using codec: " << codec;
 		
-		transceiver->setCodec(-1); //dummy codec
+		transceiver->setCodec(codec); //dummy codec
 		transceiver->setLocalEndpoint(*localAddr, localRTPPort);
 		transceiver->setRemoteEndpoint(*remoteAddr, remoteRTPPort);
 		transceiver->start();
