@@ -182,8 +182,9 @@ void DummyUI::findDirectory(string port, string name) {
 	char **argv;
 	Ice::CommunicatorPtr ic = Ice::initialize ();
 	stringstream a;
-	a << string("Directory") << ":default -p " << port << " -h " << name;
+	a << string("Directory") << ":default -h " << name << " -p " << port;
 	Ice::ObjectPrx base = ic->stringToProxy ( a.str() );
+	cout << "XXXX: " << a.str() << endl;
 	directory = DirectoryPrx::checkedCast ( base );
 	if ( !directory )
 		throw "Invalid proxy";
