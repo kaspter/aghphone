@@ -30,6 +30,7 @@
 #include "master.h"
 #include "states.h"
 #include "globals.h"
+#include "iface.h"
 
 namespace agh {
 
