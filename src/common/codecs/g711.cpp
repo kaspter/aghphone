@@ -110,7 +110,7 @@ int G711a::decode(char *dest, char *src, int srcsize)
 		buf[i] = *((unsigned char *)(src+i));
 	}
 	::alaw_expand(srcsize, buf, (short *) dest);
-	return srcsize * 2;
+	return 320;
 }
 
 } /* namespace */
