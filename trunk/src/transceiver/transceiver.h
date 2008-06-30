@@ -52,7 +52,7 @@ typedef short sampleType;
 class Transceiver;
 //class Audio;
 
-class Transmitter : public Thread, TimerPort {
+class Transmitter : public ost::Thread, TimerPort {
 	Transceiver *t;
 	
 	RingBuffer *outBuffer;
@@ -63,7 +63,7 @@ public:
 	void run();
 };
 
-class Receiver : public Thread, TimerPort {
+class Receiver : public ost::Thread, TimerPort {
 	Transceiver *t;
 public:
 	Receiver(Transceiver *t);
