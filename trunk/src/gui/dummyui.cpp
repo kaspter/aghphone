@@ -113,15 +113,14 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 				cout << "Register in directory: "  << endl;
 				
 				TerminalAddress address;
-				std::ostringstream o;
-				o << string("127.0.0.1") << this->lIcePort;
-				address.name = o.str();
+				string alias;
+				cout << "Alias: ";
+				cin >> alias;
+				address.name = alias;
 				
 				std::ostringstream o2;
 				o2 << string("") << this->lIcePort;
 				address.port = o2.str();
-				
-				address.ipAddress = string("127.0.0.1");
 				
 				try {
 					this->directory->registerTerminal(address);

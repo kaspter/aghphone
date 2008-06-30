@@ -47,7 +47,7 @@ void DirectoryImpl::registerTerminal(const TerminalAddress& address, const Ice::
 		throw TerminalExistsException();
 	}
 	
-	terminals[remoteAddr->getHostname()] = newAddress;
+	terminals[newAddress.name] = newAddress;
 	
 	cout << newAddress.name << " successfully registered [" << newAddress.ipAddress << ":" << newAddress.port << "]" << endl;
 }
