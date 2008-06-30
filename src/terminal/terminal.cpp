@@ -63,7 +63,7 @@ Terminal::Terminal(int lIcePort) :
 	remoteRTPPort(0), localRTPPort(defaultRtpPort), localIcePort(lIcePort),
 			localAddr(0), remoteAddr(0), currentState(States::DISCONNECTED),
 			ic(0), adapter(0), remoteTerminal(0), localCallback(0),
-			transceiver(0), codec(AudioCodec::GSM) {
+			transceiver(0), codec(AudioCodec::PCMU) {
 
 	cout << "Constructor" << endl;
 
