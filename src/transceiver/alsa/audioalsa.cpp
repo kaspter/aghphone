@@ -111,7 +111,6 @@ printf("framespb: %ld, packetsize: %d\n", framesPerBuffer, t->packetSize); fflus
 	outputBuffer = new RingBuffer(framesPerBuffer*200, t->packetSize);
 	inputBuffer = new RingBuffer(framesPerBuffer*200, t->packetSize);
 	sampleRate = 8000.0;
-printf("dupa\n"); fflush(stdout);
 
 	int err = snd_pcm_start(capture_handle);
 	if(err < 0) cout << "Alsa error : cannot start capture stream : " << snd_strerror(err) << endl;
