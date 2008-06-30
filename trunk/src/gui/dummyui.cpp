@@ -181,7 +181,9 @@ bool DummyUI::onStateTransition(int prevState, int curState, const IPV4Address& 
 void DummyUI::findDirectory(string port, string name) {
 	char **argv;
 	Ice::CommunicatorPtr ic = Ice::initialize ();
-	Ice::ObjectPrx base = ic->stringToProxy ( string("Directory")+":default -p "+port );
+	stringstream a;
+	a << string("Directory") << ":default -p " << port << " -h " << name;
+	Ice::ObjectPrx base = ic->stringToProxy ( a.str() );
 	directory = DirectoryPrx::checkedCast ( base );
 	if ( !directory )
 		throw "Invalid proxy";
