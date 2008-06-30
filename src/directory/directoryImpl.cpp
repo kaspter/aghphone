@@ -78,14 +78,15 @@ int main ( int argc, char* argv[] )
 	Ice::CommunicatorPtr ic;
 	try
 	{
-		ic = Ice::initialize ( argc, argv );
-		string params = "default -p "+port;
-	
-		Ice::ObjectAdapterPtr adapter
-			= ic->createObjectAdapterWithEndpoints (name, params);
-	
+		ic = Ice::initialize ( );
+		stringstream iceEndpoint;
+		iceEndpoint << "default -p " << port;	
+		
+		Ice::ObjectAdapterPtr adapter = ic->createObjectAdapterWithEndpoints(name,
+				iceEndpoint.str());
+		
 		Ice::ObjectPtr object = new DirectoryImpl;
-		adapter->add ( object, ic->stringToIdentity ( name ) );
+		adapter->add( object, ic->stringToIdentity(name));
 		adapter->activate();
 	
 		ic->waitForShutdown();
