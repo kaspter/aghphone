@@ -31,7 +31,7 @@ namespace agh {
 	
 TransportCCRTP::TransportCCRTP()
 {
-	sendBuffer = new MsgBuffer(4096, 20);
+ 	sendBuffer = new MsgBuffer(4096, 20);
 	framesPerPacket = 0;
 	frameSize = 0;
 	

@@ -27,36 +27,19 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "tools.h"
-// #include "icecommon.h"
 #include "iface.h"
 #include "states.h"
-// #include "../ice/states.h"
+#include "mixercommon.h"
+#include "mixercore.h"
 
-// #include "../common/master.h"
-// #include "../ice/icecommon.h"
-
-
-// #include "../ice/iface.h"
-// #include "../common/restypes.h"
-// #include "../common/globals.h"
-// #include "../common/tools.h"
-// #include "../ice/icecommon.h"
-// #include "../transceiver/transceiver.h"
-
-// #include "../common/states.h"
 
 using namespace std;
 using namespace ost;
 
 namespace agh {
-	
-struct TerminalInfo {
-	string host;
-	int rtpPort;
-	IPV4Address address;
-};
 
 class Mixer : public ISlave {
 protected:
@@ -85,7 +68,9 @@ protected:
 	IMasterCallbackPrx masterCallbackPrx;
 	
 	vector<TerminalInfo> remoteHosts;
-
+	map<string, TerminalInfo*> remoteHostsM;
+	
+	MixerCore* mixerCore;
 public:
 	Mixer(int lIcePort = defaultIcePort);
 	virtual ~Mixer();
@@ -95,6 +80,7 @@ public:
 	virtual int getLocalRtpPort() const;
 	virtual const IPV4Address *getRemoteHost() const;
 	virtual const IPV4Address *getLocalHost() const;
+	IMasterCallbackPrx getMasterCallback() const { return masterCallbackPrx; };
     
 	/* ISlave */
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);

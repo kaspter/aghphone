@@ -30,12 +30,17 @@
 #include <map>
 #include <Ice/Ice.h>
 #include <IceUtil/IceUtil.h>
+#include <IceUtil/Thread.h>
 #include <cc++/address.h>
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/helpers/exception.h>
 
 #include "mixer.h"
+#include "codecfactory.h"
+#include "codec.h"
+#include "transportccrtp.h"
+#include "globals.h"
 
 using namespace std;
 using namespace agh;
@@ -52,7 +57,26 @@ const string Mixer::adapterName("AGHPhoneAdapter");
 const string Mixer::adapterCallbackName("AGHPhoneCallbackAdapter");
 const string Mixer::remoteMixerName("Slave");
 const int Mixer::defaultIcePort = 24474;
-const int Mixer::defaultRtpPort = 5004;
+const int Mixer::defaultRtpPort = 6014;
+
+class WorkerThread : public IceUtil::Thread {
+	private:
+		Mixer *mixer;
+		CallParametersResponse params;
+	public:
+		WorkerThread(Mixer* mixer, CallParametersResponse params);
+		virtual void run();
+};
+
+WorkerThread::WorkerThread(Mixer* mixer, CallParametersResponse params) {
+	this->mixer = mixer;
+	this->params = params;
+}
+
+void WorkerThread::run() {
+	mixer->getMasterCallback()->remoteTryConnectAck(params);
+}
+
 
 Mixer::Mixer(int lIcePort) :
 			localRTPPort(defaultRtpPort),
@@ -72,6 +96,10 @@ Mixer::Mixer(int lIcePort) :
 	ISlavePtr localMixer = this;
 	adapter->add(localMixer, ic->stringToIdentity(remoteMixerName));
 	adapter->activate();
+	
+	// start core
+	mixerCore = new MixerCore(&(this->remoteHostsM));
+	mixerCore->start();
 	
 	LOG4CXX_DEBUG(logger, "Mixer::Mixer adapter activated()");
 	ic->waitForShutdown(); // TODO to remove
@@ -139,25 +167,39 @@ void Mixer::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::I
 		delete remoteAddr;
 	}
 	
-	// TODO input/output codecs 
 	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
-	TerminalInfo info;
-	info.address = *tmpAddr;
-	info.rtpPort = params.masterRtpPort;
-	remoteHosts.push_back(info);
+	TerminalInfo *info = new TerminalInfo;
+	info->address = *tmpAddr;
+	info->rtpPort = params.masterRtpPort;
+	info->outgoingCodec = params.outgoingCodec.id;
+	info->incomingCodec = params.incomingCodec.id;
+	info->transport = NULL;
+	info->readedSize = 0;
+	remoteHostsM[tmpAddr->getHostname()] = info; 
 	a << "Mixer::remoteTryConnect() conf received, remote addr: " << tmpAddr << " port: " << params.masterRtpPort;
  	LOG4CXX_DEBUG(logger, a.str());
 	
 	changeState(States::PASSIVE_CONNECTED);
 	
 	// inform remote site
+	LOG4CXX_DEBUG(logger, string("Mixer::remoteTryConnect() sending ACK..."));
 	CallParametersResponse response;
 	response.slaveRtpPort = localRTPPort;
-	masterCallbackPrx->remoteTryConnectAck(response);
+	
+	// Response in new thread
+	WorkerThread* tmpThread = new WorkerThread(this, response);
+	tmpThread->start();
+	LOG4CXX_DEBUG(logger, string("Mixer::remoteTryConnect() ACK has been sent"));
 }
 
 void Mixer::remoteStartTransmission(const ::Ice::Current& curr) {
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission()"));
+	
+ 	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
+	TerminalInfo *info = remoteHostsM[tmpAddr->getHostname()];
+	if (remoteHostsM.find(tmpAddr->getHostname()) == remoteHostsM.end()  ) {
+		cout << "ERROR info not found\n";
+	}
 	
 	if (this->currentState != States::PASSIVE_CONNECTED) {
 		LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission() bad state"));
@@ -167,6 +209,24 @@ void Mixer::remoteStartTransmission(const ::Ice::Current& curr) {
 		cout << "TRANSCEIVER STARTED\n";
 		
 		// TODO start RTP.RTCP transmission
+		CodecFactory codecfactory;
+		Codec* codecInc = codecfactory.getCodec(AudioCodec::PCMU); // HACK
+// 		Codec* codecInc = codecfactory.getCodec(info->incomingCodec);
+		Codec* codecOut = codecfactory.getCodec(AudioCodec::PCMU);
+//		Codec* codecOut = codecfactory.getCodec(info->outgoingCodec); // HACK
+			
+		info->transport = new TransportCCRTP();
+		info->transport->setParams(codecInc->getFrameCount(), codecInc->getFrameSize());
+		info->transport->setLocalEndpoint("0.0.0.0", localRTPPort);
+		info->transport->setRemoteEndpoint(info->address, info->rtpPort);
+		info->buf = new RingBuffer(1024*1024*1024, 1);
+		
+		stringstream a;
+		a << "rem address: " << info->address << " port: " << info->rtpPort;
+		LOG4CXX_DEBUG(logger, a.str());
+		
+		info->transport->start();
+		
 		LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission() transmission started"));
 	}
 }

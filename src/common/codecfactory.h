@@ -30,7 +30,6 @@ using namespace std;
 namespace agh {
 
 class CodecFactory {
-	map<int, Codec*> instanceMap;
 public:
 	CodecFactory();
 	~CodecFactory();
