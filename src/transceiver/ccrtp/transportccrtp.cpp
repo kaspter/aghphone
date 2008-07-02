@@ -154,7 +154,7 @@ void TransportCCRTP::flush()
 				//current_timestamp, timestamp); fflush(stdout);
 		}
 		
-		if(current_timestamp > timestamp)
+		if(current_timestamp > timestamp+5000)
 			timestamp = socket->getCurrentTimestamp();
 	}
 	sendBuffer->debug();
