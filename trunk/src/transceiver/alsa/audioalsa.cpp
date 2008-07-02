@@ -351,10 +351,10 @@ void AudioAlsa::flush()
 {
 	if(outputBuffer->getReadyCount() >= framesPerBuffer) { 
 		char buf[2048];
-		uint32_t buf32[1024];
+		int32_t buf32[1024];
 		outputBuffer->peekData(buf, framesPerBuffer);
 		for(int i=0; i<framesPerBuffer; i++) {
-			buf32[i] = (uint32_t)(((uint16_t*)buf)[i] << 16);
+			buf32[i] = (int32_t)(((int16_t*)buf)[i] << 16);
 		} 
 		int err = alsa_write(playback_handle, (unsigned char*)buf32, framesPerBuffer);
 		if(err > 0) {
@@ -376,9 +376,9 @@ void AudioAlsa::read()
 		if(err <= 0) {
 			cout << "Failed to read samples from capture device : " << snd_strerror(err) << endl;
 		} else {
-			uint16_t buf16[1024];
+			int16_t buf16[1024];
 			for(int i=0;i<t->framesPerBuffer;i++) {
-				buf16[i] = (uint16_t)(((uint32_t*)buf)[i] >> 16);
+				buf16[i] = (int16_t)(((int32_t*)buf)[i] >> 16);
 			}
 			inputBuffer->putData((char*)buf16, err);
 		}
