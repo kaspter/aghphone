@@ -151,7 +151,7 @@ void Transmitter::run()
 {
 	char buf[2048];
 	
-	TimerPort::setTimer(20);
+	TimerPort::setTimer(10);
 	
 	while( 1 ) {
 		t->audio->read();
@@ -165,7 +165,7 @@ void Transmitter::run()
 		t->transport->flush();
 		
 		Thread::sleep(TimerPort::getTimer());
-		TimerPort::incTimer(20);
+		TimerPort::incTimer(10);
 	}
 }
 
@@ -180,7 +180,7 @@ Receiver::~Receiver()
 
 void Receiver::run()
 {
-	TimerPort::setTimer(20);
+	TimerPort::setTimer(10);
 	
 	while(1) {
 		char buf[2048];
@@ -195,7 +195,7 @@ void Receiver::run()
 		t->audio->flush();
 		
 		Thread::sleep(TimerPort::getTimer());
-		TimerPort::incTimer(20);
+		TimerPort::incTimer(10);
 	}
 }
 
