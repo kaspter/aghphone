@@ -167,7 +167,7 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	 */
 	int periodsize = 160;
 	int periods = 8;
-	snd_pcm_format_t format = SND_PCM_FORMAT_FLOAT;
+	snd_pcm_format_t format = SND_PCM_FORMAT_S16;
 	
 	snd_pcm_hw_params_alloca(&hwparams);
 	
@@ -351,16 +351,12 @@ void AudioAlsa::flush()
 {
 	if(outputBuffer->getReadyCount() >= framesPerBuffer) { 
 		char buf[2048];
-		float buf32[1024];
 		outputBuffer->peekData(buf, framesPerBuffer);
-		for(int i=0; i<framesPerBuffer; i++) {
-			buf32[i] = ((float)(((int16_t*)buf)[i])/(float)32768.0);
-		} 
-		int err = alsa_write(playback_handle, (unsigned char*)buf32, framesPerBuffer);
+		int err = alsa_write(playback_handle, (unsigned char*)buf, framesPerBuffer);
 		if(err > 0) {
 			outputBuffer->skipData(err);
 		} else {
-			printf("couldn't write to the output, omitting %d frames\n", framesPerBuffer); fflush(stdout);
+			printf("couldn't write to the output, omitting %ld frames\n", framesPerBuffer); fflush(stdout);
 			outputBuffer->skipData(framesPerBuffer);
 		}
 	}
@@ -371,16 +367,11 @@ void AudioAlsa::read()
 	if(alsa_can_read(capture_handle, framesPerBuffer*(int)(sampleRate/8000.0))) {
 		char buf[2048];
 		int err = alsa_read(capture_handle, (unsigned char*)buf, (int)framesPerBuffer*(int)(sampleRate/8000.0));
-
 		
 		if(err <= 0) {
 			cout << "Failed to read samples from capture device : " << snd_strerror(err) << endl;
 		} else {
-			int16_t buf16[1024];
-			for(int i=0;i<t->framesPerBuffer;i++) {
-				buf16[i] = (int16_t)((((float*)buf)[i]*32768.0 ));
-			}
-			inputBuffer->putData((char*)buf16, err);
+			inputBuffer->putData(buf, err);
 		}
 	}
 }
