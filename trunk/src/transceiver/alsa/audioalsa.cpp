@@ -172,7 +172,7 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	int periodsize = 160;
 	int periods = 8;
 	snd_pcm_format_t format;
-	if(!rw) format = SND_PCM_FORMAT_FLOAT;
+	if(!rw) format = SND_PCM_FORMAT_S32;
 	else format = SND_PCM_FORMAT_S16;
 	
 	snd_pcm_hw_params_alloca(&hwparams);
@@ -386,7 +386,7 @@ void AudioAlsa::read()
 			int16_t nbuf[1024];
 			
 			for(int i=0;i<err;i++) {
-				nbuf[i] = (int16_t) (  ( ( float* ) buf )[i] * (float)32768.0 );
+				nbuf[i] = (int16_t) (  ( ( int32_t* ) buf )[i] >> 16 );
 			}
 			
 			inputBuffer->putData((char*)nbuf, err);
