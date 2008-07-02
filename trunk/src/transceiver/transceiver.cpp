@@ -156,6 +156,7 @@ void Transmitter::run()
 	while( 1 ) {
 		t->audio->read();
 		bool canRead = t->audio->getData((void*)buf, t->framesPerBuffer);
+
 		if( canRead ) {
 			char bufferenc[2048];
 			int elen = t->codec->encode(bufferenc, buf);
@@ -188,6 +189,7 @@ void Receiver::run()
 		
 		if( size > 0 ) {
 			char dbuf[2048];
+
 			int dlen = t->codec->decode(dbuf, buf, size);
 			t->audio->putData(dbuf, dlen/t->packetSize);
 		}
