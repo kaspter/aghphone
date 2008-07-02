@@ -378,7 +378,7 @@ void AudioAlsa::read()
 		} else {
 			int16_t buf16[1024];
 			for(int i=0;i<t->framesPerBuffer;i++) {
-				buf16[i] = (int16_t)(((int32_t*)buf)[i] >> 16);
+				buf16[i] = (int16_t)((((int32_t*)buf)[i] & 0xffff0000 ) >> 16);
 			}
 			inputBuffer->putData((char*)buf16, err);
 		}
