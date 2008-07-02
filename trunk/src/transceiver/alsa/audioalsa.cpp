@@ -144,8 +144,8 @@ void AudioAlsa::openStream()
 	cout << "[Capture device]:" << endl;
 	snd_pcm_dump(capture_handle, log);
 	
-	//err = snd_pcm_open(&playback_handle, outputDevice->getName().c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	err = snd_pcm_open(&playback_handle, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	err = snd_pcm_open(&playback_handle, outputDevice->getName().c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	//err = snd_pcm_open(&playback_handle, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	
 	if(err < 0) cout << "Alsa error : cannot open playback device (" << outputDevice->getName() << "): " << snd_strerror(err) << endl;
 	
@@ -171,7 +171,9 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	 */
 	int periodsize = 160;
 	int periods = 8;
-	snd_pcm_format_t format = SND_PCM_FORMAT_FLOAT;
+	snd_pcm_format_t format;
+	if(!rw) format = SND_PCM_FORMAT_FLOAT;
+	else format = SND_PCM_FORMAT_S16;
 	
 	snd_pcm_hw_params_alloca(&hwparams);
 	
@@ -357,12 +359,12 @@ void AudioAlsa::flush()
 		char buf[2048];
 		outputBuffer->peekData(buf, framesPerBuffer);
 		
-		float nbuf[1024];
-		for(int i=0;i<framesPerBuffer;i++) {
-			nbuf[i] = (float) ( (float)( ( ( int16_t* ) buf )[i]) / (float)32768.0);
-		}
+	//	float nbuf[1024];
+	//	for(int i=0;i<framesPerBuffer;i++) {
+	//		nbuf[i] = (float) ( (float)( ( ( int16_t* ) buf )[i]) / (float)32768.0);
+	//	}
 				
-		int err = alsa_write(playback_handle, (unsigned char*)nbuf, framesPerBuffer);
+		int err = alsa_write(playback_handle, (unsigned char*)buf, framesPerBuffer);
 		if(err > 0) {
 			outputBuffer->skipData(err);
 		} else {
