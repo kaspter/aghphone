@@ -134,7 +134,9 @@ void AudioAlsa::openStream()
 	
 	snd_output_stdio_attach(&log, stderr, 0);
 	
-	err = snd_pcm_open(&capture_handle, inputDevice->getName().c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	//err = snd_pcm_open(&capture_handle, inputDevice->getName().c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	err = snd_pcm_open(&capture_handle, "plughw:0,0", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
+	
 	if(err < 0) cout << "Alsa error : cannot open capture device (" << inputDevice->getName() << ") : " << snd_strerror(err) << endl;
 	
 	alsa_set_params(capture_handle, 0);
@@ -142,7 +144,9 @@ void AudioAlsa::openStream()
 	cout << "[Capture device]:" << endl;
 	snd_pcm_dump(capture_handle, log);
 	
-	err = snd_pcm_open(&playback_handle, outputDevice->getName().c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	//err = snd_pcm_open(&playback_handle, outputDevice->getName().c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	err = snd_pcm_open(&playback_handle, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	
 	if(err < 0) cout << "Alsa error : cannot open playback device (" << outputDevice->getName() << "): " << snd_strerror(err) << endl;
 	
 	alsa_set_params(playback_handle, 1);
@@ -167,7 +171,7 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	 */
 	int periodsize = 160;
 	int periods = 8;
-	snd_pcm_format_t format = SND_PCM_FORMAT_S16;
+	snd_pcm_format_t format = SND_PCM_FORMAT_FLOAT;
 	
 	snd_pcm_hw_params_alloca(&hwparams);
 	
@@ -352,7 +356,13 @@ void AudioAlsa::flush()
 	if(outputBuffer->getReadyCount() >= framesPerBuffer) { 
 		char buf[2048];
 		outputBuffer->peekData(buf, framesPerBuffer);
-		int err = alsa_write(playback_handle, (unsigned char*)buf, framesPerBuffer);
+		
+		float nbuf[1024];
+		for(int i=0;i<framesPerBuffer;i++) {
+			nbuf[i] = (float) ( (float)( ( ( int16_t* ) buf )[i]) / (float)32768.0);
+		}
+				
+		int err = alsa_write(playback_handle, (unsigned char*)nbuf, framesPerBuffer);
 		if(err > 0) {
 			outputBuffer->skipData(err);
 		} else {
@@ -371,7 +381,13 @@ void AudioAlsa::read()
 		if(err <= 0) {
 			cout << "Failed to read samples from capture device : " << snd_strerror(err) << endl;
 		} else {
-			inputBuffer->putData(buf, err);
+			int16_t nbuf[1024];
+			
+			for(int i=0;i<err;i++) {
+				nbuf[i] = (int16_t) (  ( ( float* ) buf )[i] * (float)32768.0 );
+			}
+			
+			inputBuffer->putData((char*)nbuf, err);
 		}
 	}
 }
