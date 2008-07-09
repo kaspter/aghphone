@@ -320,6 +320,9 @@ void Terminal::remoteDisengage(const ::Ice::Current& curr) {
 
 int Terminal::remotePing(const Ice::Current& curr) {
 	static int x = 0;
+	if (passiveMonitor) {
+		passiveMonitor->kickWatchdog();
+	}
 	return ++x;
 }
 
@@ -399,6 +402,10 @@ PassiveMonitor::PassiveMonitor(Terminal *t) {
 	LOG4CXX_DEBUG(logger, "Starting Passive Monitor");
 	term = t;
 	watchdog = 4;
+}
+
+PassiveMonitor::~PassiveMonitor() {
+	
 }
 
 void PassiveMonitor::kickWatchdog() {
