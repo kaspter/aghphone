@@ -25,6 +25,8 @@
 #include <Ice/Ice.h>
 #include <Ice/Identity.h>
 
+#include <cc++/thread.h>
+
 #include "icecommon.h"
 #include "transceiver.h"
 #include "master.h"
@@ -33,6 +35,9 @@
 #include "iface.h"
 
 namespace agh {
+
+class ActiveMonitor;
+class PassiveMonitor;
 
 class MasterCallbackImpl : public IMasterCallback {
 protected:
@@ -74,6 +79,9 @@ protected:
 	ISlavePrx remoteTerminal;
 	IMasterCallbackPtr masterCallbackPtr;
 	IMasterCallbackPrx masterCallbackPrx;
+	
+	ActiveMonitor *activeMonitor;
+	PassiveMonitor *passiveMonitor;
 
 public:
 	Terminal(int lIcePort = defaultIcePort);
@@ -102,11 +110,39 @@ public:
     virtual void remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr);
     virtual void remoteStartTransmission(const ::Ice::Current& curr);
     virtual void remoteDisengage(const ::Ice::Current& curr); 
+    virtual int remotePing(const Ice::Current& curr);
     
     virtual void onACK(const ::agh::CallParametersResponse&);
     virtual void onNACK();
 private:
 	void changeState(int newState);
+	
+	friend class ActiveMonitor;
+	friend class PassiveMonitor;
+};
+
+class ActiveMonitor: public ost::Thread {
+protected:
+	Terminal *term;
+public:
+	
+	ActiveMonitor(Terminal *t);
+	virtual ~ActiveMonitor();
+	
+	virtual void run();
+};
+
+class PassiveMonitor: public ost::Thread {
+protected:
+	Terminal *term;
+	int watchdog;
+	
+public:
+	PassiveMonitor(Terminal *t);
+	virtual ~PassiveMonitor();
+	
+	virtual void kickWatchdog();
+	virtual void run();
 };
 
 } /* namespace */

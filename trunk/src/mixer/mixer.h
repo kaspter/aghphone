@@ -86,7 +86,8 @@ public:
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);
     virtual void remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr);
     virtual void remoteStartTransmission(const ::Ice::Current& curr);
-    virtual void remoteDisengage(const ::Ice::Current& curr); 
+    virtual void remoteDisengage(const ::Ice::Current& curr);
+    virtual int remotePing(const Ice::Current& curr);
 	
 	/* IMixer */
 	virtual void foo(const ::Ice::Current& curr);
