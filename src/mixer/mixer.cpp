@@ -243,6 +243,11 @@ void Mixer::remoteDisengage(const ::Ice::Current& curr) {
 	// TODO	 
 }
 
+int Mixer::remotePing(const Ice::Current& curr) {
+	static int x = 0;
+	return ++x;
+}
+
 void Mixer::foo(const ::Ice::Current& curr) {
 	
 }

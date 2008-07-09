@@ -31,6 +31,7 @@
 #include <Ice/Ice.h>
 #include <IceUtil/IceUtil.h>
 #include <cc++/address.h>
+#include <cc++/thread.h>
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/helpers/exception.h>
@@ -63,9 +64,8 @@ Terminal::Terminal(int lIcePort) :
 	remoteRTPPort(0), localRTPPort(defaultRtpPort), localIcePort(lIcePort),
 			localAddr(0), remoteAddr(0), currentState(States::DISCONNECTED),
 			ic(0), adapter(0), remoteTerminal(0), localCallback(0),
-			transceiver(0), codec(AudioCodec::LPC) {
+			transceiver(0), codec(AudioCodec::PCMU), activeMonitor(0), passiveMonitor(0) {
 
-	cout << "Constructor" << endl;
 
 	if ((localIcePort < 1024) || (localIcePort > 32768))
 		localIcePort = defaultIcePort;
@@ -186,6 +186,9 @@ void Terminal::connect(const IPV4Address& addr, int remoteIcePort) {
 
 	this->changeState(States::ACTIVE_CONNECTED);
 	remoteTerminal->remoteTryConnect(params, tmpIdentity);
+	
+	activeMonitor = new ActiveMonitor(this);
+	activeMonitor->start();
 }
 
 void Terminal::changeState(int newState) {
@@ -209,30 +212,18 @@ int Terminal::startTransmission() {
 			return -1;
 		}
 		//TODO: set codec
-		transceiver->setCodec(codec); //dummycodec
+		transceiver->setCodec(codec);
 		transceiver->setLocalEndpoint(*localAddr, localRTPPort);
 		transceiver->setRemoteEndpoint(*remoteAddr, remoteRTPPort);
-		//transceiver->start();
 
-		//int res = 0;
 		stringstream a;
 		a << "Starting transceiver :: " << *localAddr << ":" << localRTPPort << " <-> " << *remoteAddr << ":" << remoteRTPPort;
 		LOG4CXX_DEBUG(logger, a.str());
+		
 		int res = transceiver->start();
 		LOG4CXX_DEBUG(logger, "Local transceiver started");
 
-		// TODO: switch to smarter error handling mechanism (like other methods)
-		if (res != 0) {
-			LOG4CXX_ERROR(logger, "Cannot start transmission");
-			return res;
-		}
 
-		//TODO: change error mechanism
-/*		if (res != 0) {
-			LOG4CXX_ERROR(logger, "Cannot start remote transmission");
-			return res;
-		}
-*/
 		LOG4CXX_DEBUG(logger, "Transition to ACTIVE_OPERATIONAL state");
 		changeState(States::ACTIVE_OPERATIONAL);
 
@@ -242,12 +233,18 @@ int Terminal::startTransmission() {
 	return -1; //TODO: change error mechanism
 }
 
+//TODO: stop transceiver
 void Terminal::disengage() {
-	LOG4CXX_DEBUG(logger, "Terminal::disconnect()");
-	if (currentState != States::DISCONNECTED) {
-		// TODO: stop trasmission (Transceiver component needed first
-		changeState(States::DISCONNECTED);
+	LOG4CXX_DEBUG(logger, "Terminal::disengage()");
+	if (activeMonitor) {
+		delete activeMonitor;
+		activeMonitor = 0;
 	}
+	if (passiveMonitor) {
+		delete passiveMonitor;
+		passiveMonitor = 0;
+	}
+	changeState(States::DISCONNECTED);
 }
 
 void Terminal::registerCallback(agh::IUICallback* callback) {
@@ -291,6 +288,9 @@ void Terminal::remoteTryConnect(const ::agh::CallParameters& params,
 // 	codecOut = params.outgoingCodec.id;
 
 	changeState(States::PASSIVE_CONNECTED);
+	
+	passiveMonitor = new PassiveMonitor(this);
+	passiveMonitor->start();
 }
 
 void Terminal::remoteStartTransmission(const ::Ice::Current& curr) {
@@ -313,8 +313,14 @@ void Terminal::remoteStartTransmission(const ::Ice::Current& curr) {
 	}
 }
 
+//TODO: correct implementation
 void Terminal::remoteDisengage(const ::Ice::Current& curr) {
+	changeState(States::DISCONNECTED);
+}
 
+int Terminal::remotePing(const Ice::Current& curr) {
+	static int x = 0;
+	return ++x;
 }
 
 void Terminal::onACK(const ::agh::CallParametersResponse& param) {
@@ -363,6 +369,53 @@ void MasterCallbackImpl::remoteTryConnectAck(
 
 void MasterCallbackImpl::remoteTryConnectNack(const ::Ice::Current& curr) {
 	master->onNACK();
+}
+
+	
+ActiveMonitor::ActiveMonitor(Terminal *t) {
+	LOG4CXX_DEBUG(logger, "Starting Active Monitor");
+	term = t;
+}
+
+ActiveMonitor::~ActiveMonitor() {
+}
+	
+void ActiveMonitor::run() {
+	while (1) {
+		if (term && term->remoteTerminal && (term->currentState > States::DISCONNECTED)) {
+			try {
+				term->remoteTerminal->remotePing();
+			} catch (...) {
+				LOG4CXX_DEBUG(logger, "Active Monitor: loss of ICE connection. disconnecting.");
+				term->disengage();
+				return;
+			}
+		}
+		ost::Thread::sleep(500);
+	}
+}
+
+PassiveMonitor::PassiveMonitor(Terminal *t) {
+	LOG4CXX_DEBUG(logger, "Starting Passive Monitor");
+	term = t;
+	watchdog = 4;
+}
+
+void PassiveMonitor::kickWatchdog() {
+	watchdog = 4;
+}
+
+void PassiveMonitor::run() {
+	while (1) {
+		if (term->currentState > States::DISCONNECTED) {
+			if (--watchdog == 0) {
+				LOG4CXX_DEBUG(logger, "Passive Monitor: loss of connection. disconnecting.");
+				term->disengage();
+				return;
+			}
+		}
+		ost::Thread::sleep(500);
+	}
 }
 
 } /* namespace agh */
