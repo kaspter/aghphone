@@ -64,7 +64,7 @@ Terminal::Terminal(int lIcePort) :
 	remoteRTPPort(0), localRTPPort(defaultRtpPort), localIcePort(lIcePort),
 			localAddr(0), remoteAddr(0), currentState(States::DISCONNECTED),
 			ic(0), adapter(0), remoteTerminal(0), localCallback(0),
-			transceiver(0), codec(AudioCodec::PCMU), activeMonitor(0), passiveMonitor(0) {
+			transceiver(0), codec(AudioCodec::LPC), activeMonitor(0), passiveMonitor(0) {
 
 
 	if ((localIcePort < 1024) || (localIcePort > 32768))
@@ -289,8 +289,8 @@ void Terminal::remoteTryConnect(const ::agh::CallParameters& params,
 
 	changeState(States::PASSIVE_CONNECTED);
 	
-	passiveMonitor = new PassiveMonitor(this);
-	passiveMonitor->start();
+	//passiveMonitor = new PassiveMonitor(this);
+	//passiveMonitor->start();
 }
 
 void Terminal::remoteStartTransmission(const ::Ice::Current& curr) {
