@@ -23,6 +23,8 @@
 #define __CODECFACTORY_H__INCLUDED__
 
 #include <map>
+#include <vector>
+#include <string>
 #include "codec.h"
 
 using namespace std;
@@ -35,6 +37,8 @@ public:
 	~CodecFactory();
 	
 	Codec *getCodec(int id);
+	string getCodecName(int id);
+	vector<int> getSupportedCodecs();
 };
 
 } /* namespace agh */

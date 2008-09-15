@@ -49,7 +49,8 @@ struct AudioCodec {
 		DVI4_22050,
 		G729,
 		RESERVED3,
-		ILBC_20 = 100
+		ILBC_20 = 100,
+  		DUMMY
 	};
 };
 
