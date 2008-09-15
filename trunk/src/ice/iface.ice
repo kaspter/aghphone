@@ -1,8 +1,6 @@
 #include <Ice/Identity.ice>
 #include "icecommon.ice"
 
-
-
 module agh {
 
 	interface IMasterCallback {
