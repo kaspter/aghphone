@@ -7,7 +7,7 @@ module agh {
 	exception NoSuchTerminalException extends DirectoryException {};
 	exception TerminalExistsException extends DirectoryException {};
 	
-	sequence<string> Terminals;
+	sequence<TerminalAddress> Terminals;
 	
 	interface Directory {
 	
@@ -18,6 +18,7 @@ module agh {
 		TerminalAddress findTerminal(string name)
 			throws NoSuchTerminalException;
 			
+		Terminals findTerminals(string name);
 		Terminals getTerminals();
 	};
 };
