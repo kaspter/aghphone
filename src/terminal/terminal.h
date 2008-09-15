@@ -44,8 +44,8 @@ protected:
 	agh::IMaster *master;
 public:
 	MasterCallbackImpl(agh::IMaster *master);
-	
-    virtual void remoteTryConnectAck(const CallParametersResponse& response, const ::Ice::Current& curr);	
+
+    virtual void remoteTryConnectAck(const CallParametersResponse& response, const ::Ice::Current& curr);
     virtual void remoteTryConnectNack(const ::Ice::Current& curr);
 };
 
@@ -75,7 +75,7 @@ protected:
 
 	IUICallback* localCallback;
 	Transceiver* transceiver;
-	
+
 	ISlavePrx remoteTerminal;
 	IMasterCallbackPtr masterCallbackPtr;
 	IMasterCallbackPrx masterCallbackPrx;
@@ -86,12 +86,14 @@ protected:
 public:
 	Terminal(int lIcePort = defaultIcePort);
 	virtual ~Terminal();
-	
+
 	virtual bool isConnected() const; // TODO getState
 	virtual void connect(const IPV4Address& addr, int remoteIcePort);
 	virtual void disengage();
 	virtual void setLocalRtpPort(int port);
 	virtual int getLocalRtpPort() const;
+	int getLocalIcePort() { return localIcePort; }
+	void setLocalIcePort(const int port) { localIcePort = port; }
 	virtual int getDestinationRtpPort() const;
 	virtual const IPV4Address *getRemoteHost() const;
 	virtual const IPV4Address *getLocalHost() const;
@@ -101,15 +103,15 @@ public:
 	virtual void setTransceiver(Transceiver *transceiver);
 	virtual void unsetTransceiver();
 	IMasterCallbackPrx getMasterCallback() { return masterCallbackPrx; }
-    
+
 	void setAudioCodec(int codecID) { codec = codecID; }
-	int getAudioCodec() { return codec; } 
-	
+	int getAudioCodec() { return codec; }
+
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);
 
     virtual void remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr);
     virtual void remoteStartTransmission(const ::Ice::Current& curr);
-    virtual void remoteDisengage(const ::Ice::Current& curr); 
+    virtual void remoteDisengage(const ::Ice::Current& curr);
     virtual int remotePing(const Ice::Current& curr);
     
     virtual void onACK(const ::agh::CallParametersResponse&);
