@@ -66,6 +66,7 @@ Terminal::Terminal(int lIcePort) :
 			ic(0), adapter(0), remoteTerminal(0), localCallback(0),
 			transceiver(0), codec(AudioCodec::LPC), activeMonitor(0), passiveMonitor(0) {
 
+	cout << "[Terminal]Constructor" << endl;
 
 	if ((localIcePort < 1024) || (localIcePort > 32768))
 		localIcePort = defaultIcePort;
@@ -349,7 +350,7 @@ void Terminal::onACK(const ::agh::CallParametersResponse& param) {
 		this->startTransmission();
 		remoteTerminal->remoteStartTransmission();
 		LOG4CXX_DEBUG(logger, string("Terminal::onACK() starting transmission"));
-		// 		
+		//
 
 		cout << "Before change state\n";
 		changeState(States::ACTIVE_OPERATIONAL);
