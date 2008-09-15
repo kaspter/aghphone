@@ -47,24 +47,24 @@ void AghPhoneDialog::callSlave() {
 	QByteArray ba = s.toLatin1();
 	const char *c = ba.data();
 	printf("%s\n", c);
-	
+
 	this->lIcePort = local_port->text().toInt();
 	this->rIcePort = remote_port->text().toInt();
 
 	char address[80];
 
-	sprintf(address, "%s.%s.%s.%s", 
-		ip_part_1->text().toLatin1().data(), ip_part_2->text().toLatin1().data(), 
+	sprintf(address, "%s.%s.%s.%s",
+		ip_part_1->text().toLatin1().data(), ip_part_2->text().toLatin1().data(),
 		ip_part_3->text().toLatin1().data(), ip_part_4->text().toLatin1().data());
 	printf("address: %s:%d\n", address, rIcePort);
-	
+
 	terminal = new Terminal(lIcePort);
 	terminal->registerCallback(this);
-	
+
 	TransceiverFactory factory;
 	Transceiver* transceiver = factory.getTransceiver("alsa", "ccrtp");
-	
-	terminal->setTransceiver(transceiver); 
+
+	terminal->setTransceiver(transceiver);
 	terminal->setLocalRtpPort(this->lIcePort);
 	terminal->connect(address, this->rIcePort);
 }
