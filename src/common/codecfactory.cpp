@@ -26,6 +26,8 @@
 #include "ilbc20.h"
 #include "globals.h"
 
+using namespace std;
+
 namespace agh {
 
 CodecFactory::CodecFactory()
@@ -34,6 +36,46 @@ CodecFactory::CodecFactory()
 
 CodecFactory::~CodecFactory()
 {
+}
+
+vector<int> CodecFactory::getSupportedCodecs() {
+	vector<int> codecList;
+	
+	codecList.push_back(AudioCodec::PCMU);
+	codecList.push_back(AudioCodec::PCMA);
+	codecList.push_back(AudioCodec::GSM);
+	codecList.push_back(AudioCodec::ILBC_20);
+	codecList.push_back(AudioCodec::DUMMY);
+	
+	return codecList;
+}
+
+string CodecFactory::getCodecName(int id) {
+	std::string codecName = "aa";
+	
+	switch(id) {
+		case AudioCodec::PCMU:
+			codecName =  "G711u";
+			break;
+	
+		case AudioCodec::PCMA:
+			codecName =  "G711a";
+			break;
+		
+		case AudioCodec::GSM:
+			codecName =  "GSM";
+			break;
+		
+		case AudioCodec::ILBC_20:
+			codecName =  "ILBC20";
+			break;
+		
+		default:
+			codecName =  "DUMMY";
+			break;
+	}
+	
+	return codecName;
 }
 
 Codec *CodecFactory::getCodec(int id)

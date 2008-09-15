@@ -41,16 +41,20 @@ using namespace log4cxx;
 
 int main(int argc, char *argv[]) {
 
+	if (argc < 3) {
+		cout << "Bad usage:\n\tprog_name portL portR\n";
+	}
+
 	try {
 		// Set up a simple configuration that logs on the console.
 		BasicConfigurator::configure();
 	} catch(log4cxx::helpers::Exception& e) {
 		//clog << e.what() << endl;
 	}
-	
+
 	int portL = atoi(argv[1]);
 	int portR = atoi(argv[2]);
-	
+
 	DummyUI *dummy = new DummyUI(portL, portR);
 	
 	int g;
