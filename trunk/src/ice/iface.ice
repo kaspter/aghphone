@@ -23,8 +23,6 @@ module agh {
 		void remoteStartTransmission();
 		
 		void remoteDisengage();
-		
-		int remotePing();
 	
 	};
 

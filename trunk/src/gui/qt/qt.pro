@@ -8,6 +8,6 @@ DEPENDPATH += .
 INCLUDEPATH += . 
 
 # Input
-HEADERS += aghphonedialog.h
-FORMS += aghphonedialog.ui
-SOURCES += aghphonedialog.cpp main.cpp
+HEADERS += aghphonepref2.h
+FORMS += aghphonepref2.ui
+SOURCES += aghphonepref2.cpp main.cpp
