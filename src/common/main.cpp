@@ -56,7 +56,4 @@ int main(int argc, char *argv[]) {
 	int portR = atoi(argv[2]);
 
 	DummyUI *dummy = new DummyUI(portL, portR);
-	
-	int g;
-	cin >> g;
 }
