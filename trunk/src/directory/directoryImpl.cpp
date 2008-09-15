@@ -18,14 +18,27 @@ class DirectoryImpl : public Directory
 		virtual void removeTerminal(const string& name, const Ice::Current&);
 		virtual TerminalAddress findTerminal(const string& name, const Ice::Current&);
 		virtual Terminals getTerminals(const Ice::Current&);
+		virtual Terminals findTerminals(const string& name, const Ice::Current&);
 };
+
+Terminals DirectoryImpl::findTerminals(const string& name, const Ice::Current&) {
+	map<string, TerminalAddress>::iterator iter;
+	Terminals retTerminals;
+	
+	for( iter = terminals.begin(); iter != terminals.end(); iter++ ) {
+		if (iter->first.find(name) != string::npos)
+			retTerminals.push_back(iter->second);
+	}
+	
+	return retTerminals;
+}
 
 Terminals DirectoryImpl::getTerminals(const Ice::Current&) {
 	map<string, TerminalAddress>::iterator iter;
 	Terminals retTerminals;
 	
 	for( iter = terminals.begin(); iter != terminals.end(); iter++ ) {
-		retTerminals.push_back(iter->first);
+		retTerminals.push_back(iter->second);
 	}
 	
 	return retTerminals;
