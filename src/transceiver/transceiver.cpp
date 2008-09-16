@@ -34,10 +34,10 @@ Transceiver::Transceiver()
 {
 	transport = NULL;
 	audio = NULL;
-	
+
 	transmitter = new Transmitter(this);
 	receiver = new Receiver(this);
-	
+
 	cf = new CodecFactory();
 	codec = NULL;
 }
@@ -96,12 +96,12 @@ int Transceiver::setCodec(int codec)
 	this->framesPerBuffer = this->codec->getFrameCount();
 	this->jitterMult = 5;
 	this->packetSize = this->codec->getFrameSize();
-	
+
 	transport->setParams(this->framesPerBuffer, this->packetSize);
-	
+
 	if( this->codec == NULL )
 		return -1;
-	
+
 	return 0;
 }
 
@@ -115,15 +115,15 @@ int Transceiver::setRemoteEndpoint(const IPV4Address& addr, int port)
 	return transport->setRemoteEndpoint(addr, port);
 }
 
-	
+
 int Transceiver::start()
 {
 	transport->start();
 	audio->start();
-	
+
 	transmitter->start();
 	receiver->start();
-	
+
 	return 0;
 }
 
@@ -131,28 +131,28 @@ int Transceiver::stop()
 {
 	audio->stop();
 	transport->stop();
-	
+
 	return 0;
 }
 
 Transmitter::Transmitter(Transceiver *t)
 {
 	this->t = t;
-	
-	outBuffer = new RingBuffer(t->framesPerBuffer*200, t->packetSize);
 }
 
 Transmitter::~Transmitter()
 {
 	delete outBuffer;
 }
-	
+
 void Transmitter::run()
 {
+	outBuffer = new RingBuffer(t->framesPerBuffer*200, t->packetSize);
+
 	char buf[2048];
-	
+
 	TimerPort::setTimer(10);
-	
+
 	while( 1 ) {
 		t->audio->read();
 		bool canRead = t->audio->getData((void*)buf, t->framesPerBuffer);
@@ -162,9 +162,9 @@ void Transmitter::run()
 			int elen = t->codec->encode(bufferenc, buf);
 			t->transport->send(bufferenc, elen);
 		}
-		
+
 		t->transport->flush();
-		
+
 		Thread::sleep(TimerPort::getTimer());
 		TimerPort::incTimer(10);
 	}
@@ -182,20 +182,20 @@ Receiver::~Receiver()
 void Receiver::run()
 {
 	TimerPort::setTimer(10);
-	
+
 	while(1) {
 		char buf[2048];
 		long size = t->transport->recv(buf);
-		
+
 		if( size > 0 ) {
 			char dbuf[2048];
 
 			int dlen = t->codec->decode(dbuf, buf, size);
 			t->audio->putData(dbuf, dlen/t->packetSize);
 		}
-		
+
 		t->audio->flush();
-		
+
 		Thread::sleep(TimerPort::getTimer());
 		TimerPort::incTimer(10);
 	}
