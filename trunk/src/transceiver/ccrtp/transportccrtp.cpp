@@ -28,13 +28,13 @@
 using namespace std;
 
 namespace agh {
-	
+
 TransportCCRTP::TransportCCRTP()
 {
  	sendBuffer = new MsgBuffer(4096, 20);
 	framesPerPacket = 0;
 	frameSize = 0;
-	
+
 //	out1 = fopen("out1", "w");
 //	out2 = fopen("out2", "w");
 }
@@ -48,12 +48,12 @@ void TransportCCRTP::setParams(int framesPerPacket, int frameSize)
 	this->framesPerPacket = framesPerPacket;
 	this->frameSize = frameSize;
 }
-	
+
 int TransportCCRTP::setLocalEndpoint(const IPV4Address& addr, int port)
 {
 	localAddress = addr;
 	localPort = port;
-	
+
 	return 0;
 }
 
@@ -61,33 +61,33 @@ int TransportCCRTP::setRemoteEndpoint(const IPV4Address& addr, int port)
 {
 	remoteAddress = addr;
 	remotePort = port;
-	
+
 	return 0;
 }
-	
+
 int TransportCCRTP::start()
 {
 	if( (frameSize <= 0) || (framesPerPacket <= 0)) {
 		cout << "Transport fatal : frameSize or framesPerPacket not set" << endl;
 		return -1;
 	}
-	
+
 	if( (localPort == -1 ) ) {
 		cout << "Endpoint error: " << localAddress << ":" << localPort << endl;
 		return TransceiverStartResult::LOCAL_ENDPOINT_ERROR;
 	}
-	
+
 	if( ( remotePort == -1 ) || ( !remoteAddress) ) {
 		printf("error2\n");
 		return TransceiverStartResult::REMOTE_ENDPOINT_ERROR;
 	}
-	
+
 	socket = new AghRtpSession( IPV4Host(localAddress.getAddress()), localPort );
 
 	//socket->setSchedulingTimeout(10000);
 	socket->setExpireTimeout(51);
-	
-	
+
+
 	if( !socket->addDestination( IPV4Host(remoteAddress.getAddress()), remotePort ) ) {
 		/*
 		 * TODO: Implement ccrtp connection failure
@@ -95,26 +95,28 @@ int TransportCCRTP::start()
 		cout << "CCRTP destination connection failure: " << IPV4Host(remoteAddress.getAddress()) << ":" << remotePort << endl;
 		return -1;
 	}
-	
+
 	socket->setPayloadFormat( StaticPayloadFormat( sptPCMU ) );
 
 	socket->startRunning();
-	
+
 	if( socket->RTPDataQueue::isActive() )
 		cout << "active." << endl;
 	else
 	    cerr << "not active." << endl;
-	
+
 	timestamp = socket->getCurrentTimestamp() + frameSize*framesPerPacket;
-	
+
 	return 0;
 }
 
 int TransportCCRTP::stop()
 {
+	delete socket;
+
 	return 0;
 }
-	
+
 void TransportCCRTP::send(char* src, int size)
 {
 	sendBuffer->putMessage(src, size);
@@ -142,7 +144,7 @@ void TransportCCRTP::flush()
 		//printf("%ld %ld\n", current_timestamp, timestamp);
 		//fprintf(out1, "%ld\n", current_timestamp);
 		//fprintf(out2, "%ld\n", timestamp);
-		if(seq32_t(timestamp) <= seq32_t(current_timestamp + framesPerPacket)) { 
+		if(seq32_t(timestamp) <= seq32_t(current_timestamp + framesPerPacket)) {
 			socket->setExpireTimeout(frameSize*framesPerPacket * 1000);
 			char *buf;
 			int length = sendBuffer->peekMessage(&buf);
@@ -153,7 +155,7 @@ void TransportCCRTP::flush()
 			//printf("discarding surplus of audio samples, current timestamp: %ld, timestamp: %ld\n",
 				//current_timestamp, timestamp); fflush(stdout);
 		}
-		
+
 		if(current_timestamp > timestamp+2000)
 			timestamp = socket->getCurrentTimestamp();
 	}
