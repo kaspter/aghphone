@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading ui file 'aghphonepref.ui'
 **
-** Created: Fri Sep 12 18:29:52 2008
+** Created: Tue Sep 16 20:48:49 2008
 **      by: Qt User Interface Compiler version 4.4.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling ui file!

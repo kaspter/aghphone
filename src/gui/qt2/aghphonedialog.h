@@ -16,6 +16,7 @@
 #include "qtguicommon.h"
 #include <iostream>
 #include <iface.h>
+#include <QSound>
 
 using namespace agh;
 
@@ -31,6 +32,7 @@ class AghPhoneDialog : public QMainWindow, public Ui_MainWindow, public IUICallb
 		TerminalConfiguration *configuration;
 		QSystemTrayIcon *trayIcon;
 		Terminal *mainTerminal;
+		QSound *ringSound;
 
 		QMessageBox *incCallDialog;
 		QThread *incCallThread;

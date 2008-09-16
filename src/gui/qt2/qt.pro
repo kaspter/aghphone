@@ -11,3 +11,4 @@ INCLUDEPATH += .
 HEADERS += aghphonepref.h aghphonedialog.h aghphonesearchdir.h
 FORMS += aghphonepref.ui aghphonesearchdir.ui aghphonedialog.ui 
 SOURCES += aghphonepref.cpp aghphonesearchdir.cpp aghphonedialog.cpp main.cpp
+RESOURCES += aghphonedialog.qrc

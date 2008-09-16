@@ -34,6 +34,7 @@
 #include "states.h"
 #include "mixercommon.h"
 #include "mixercore.h"
+#include "directory.h"
 
 
 using namespace std;
@@ -62,33 +63,33 @@ protected:
 
 	Ice::CommunicatorPtr ic;
 	Ice::ObjectAdapterPtr adapter;
-	
+
 // 	ISlavePrx remoteMixer;
 	IMasterCallbackPtr masterCallbackPtr;
 	IMasterCallbackPrx masterCallbackPrx;
-	
+
 	vector<TerminalInfo> remoteHosts;
 	map<string, TerminalInfo*> remoteHostsM;
-	
+
 	MixerCore* mixerCore;
 public:
 	Mixer(int lIcePort = defaultIcePort);
 	virtual ~Mixer();
-	
+
 	virtual bool isConnected() const; // TODO getState
 	virtual void setLocalRtpPort(int port);
 	virtual int getLocalRtpPort() const;
 	virtual const IPV4Address *getRemoteHost() const;
 	virtual const IPV4Address *getLocalHost() const;
 	IMasterCallbackPrx getMasterCallback() const { return masterCallbackPrx; };
-    
+
 	/* ISlave */
     virtual TerminalCapabilities remoteGetCapabilities(const ::Ice::Current& curr);
     virtual void remoteTryConnect(const ::agh::CallParameters&, const ::Ice::Identity& ident, const ::Ice::Current& curr);
     virtual void remoteStartTransmission(const ::Ice::Current& curr);
     virtual void remoteDisengage(const ::Ice::Current& curr);
     virtual int remotePing(const Ice::Current& curr);
-	
+
 	/* IMixer */
 	virtual void foo(const ::Ice::Current& curr);
 private:

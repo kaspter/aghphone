@@ -115,6 +115,7 @@ DummyUI::DummyUI(int lIcePort, int rIcePort) {
 				cout << "Alias: ";
 				cin >> alias;
 				address.name = alias;
+				address.type = USERTERMINAL;
 
 				std::ostringstream o2;
 				o2 << string("") << this->lIcePort;

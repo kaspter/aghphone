@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading ui file 'aghphonedialog.ui'
 **
-** Created: Sat Sep 13 13:49:16 2008
+** Created: Tue Sep 16 20:48:49 2008
 **      by: Qt User Interface Compiler version 4.4.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling ui file!

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading ui file 'aghphonesearchdir.ui'
 **
-** Created: Fri Sep 12 18:29:52 2008
+** Created: Tue Sep 16 20:48:49 2008
 **      by: Qt User Interface Compiler version 4.4.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling ui file!
@@ -20,8 +20,8 @@
 #include <QtGui/QHBoxLayout>
 #include <QtGui/QLabel>
 #include <QtGui/QLineEdit>
-#include <QtGui/QListWidget>
 #include <QtGui/QPushButton>
+#include <QtGui/QTableWidget>
 #include <QtGui/QVBoxLayout>
 
 QT_BEGIN_NAMESPACE
@@ -38,14 +38,14 @@ public:
     QPushButton *searchButton;
     QGroupBox *groupBox;
     QVBoxLayout *verticalLayout;
-    QListWidget *resultList;
+    QTableWidget *resultTAble;
     QDialogButtonBox *buttonBox;
 
     void setupUi(QDialog *SearchDialog)
     {
     if (SearchDialog->objectName().isEmpty())
         SearchDialog->setObjectName(QString::fromUtf8("SearchDialog"));
-    SearchDialog->resize(516, 428);
+    SearchDialog->resize(516, 429);
     verticalLayout_2 = new QVBoxLayout(SearchDialog);
     verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
     groupBox_2 = new QGroupBox(SearchDialog);
@@ -86,15 +86,10 @@ public:
     groupBox->setSizePolicy(sizePolicy);
     verticalLayout = new QVBoxLayout(groupBox);
     verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
-    resultList = new QListWidget(groupBox);
-    resultList->setObjectName(QString::fromUtf8("resultList"));
-    QSizePolicy sizePolicy1(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
-    sizePolicy1.setHorizontalStretch(0);
-    sizePolicy1.setVerticalStretch(0);
-    sizePolicy1.setHeightForWidth(resultList->sizePolicy().hasHeightForWidth());
-    resultList->setSizePolicy(sizePolicy1);
+    resultTAble = new QTableWidget(groupBox);
+    resultTAble->setObjectName(QString::fromUtf8("resultTAble"));
 
-    verticalLayout->addWidget(resultList);
+    verticalLayout->addWidget(resultTAble);
 
 
     verticalLayout_2->addWidget(groupBox);

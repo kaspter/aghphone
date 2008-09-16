@@ -4,10 +4,12 @@
 #define ISQUIET(x) x < -100
 
 #include "mixercore.h"
+#include "codecfactory.h"
+#include "codec.h"
 #include "transport.h"
 
 namespace agh {
-	
+
 char sgn(char x) {
 	if (x < 0) return -1;
 	else if (x == 0) return 0;
@@ -17,7 +19,7 @@ char sgn(char x) {
 MixerCore::MixerCore(map<string, TerminalInfo*>* remoteHosts) {
 	this->remoteHosts = remoteHosts;
 	this->buffer = new RingBuffer(1024*1024*100, 1);
-	
+
 	this->receiver = new MixerCoreReceiver(remoteHosts, buffer);
 	this->transmitter = new MixerCoreTransmitter(remoteHosts, buffer);
 	this->transmitter->start();
@@ -38,21 +40,23 @@ struct timeval czas_start;
 
 void printTime() {
 	struct timeval czas_teraz;
-	
+
 	gettimeofday(&czas_teraz, NULL);
-	
-	printf("%3ld.%3ld [s] \n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
+
+	printf("%3ld.%3ld [s] \n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000);
 }
 
 void MixerCoreReceiver::run() {
-	
+
 	char *buf = new char[1024*1024*100];
-	
+	char* decBuf = new char[1024*1024*100];
+	CodecFactory codecFactory;
+
 	TimerPort::setTimer(10);
 	while(1) {
 		// Get data from all incoming streams
 		map<string, TerminalInfo*>::iterator iter;
-		
+
 		// read data
 		int index = 0;
 		for( iter = remoteHosts->begin(); iter != remoteHosts->end(); iter++ ) {
@@ -61,69 +65,79 @@ void MixerCoreReceiver::run() {
 			if (info == NULL) {
 				continue;
 			}
-					
+
 			Transport *transport = info->transport;
-					
+
 			if (transport == NULL) {
 				continue;
 			}
-					
+
 			info->readedSize = transport->recv(buf);
-			
+
 			cout << "[" << index << "] trying to read\n";
 			if (info->readedSize > 0) {
-				info->buf->putData(buf, info->readedSize);
+				// decode
+				Codec *codec = codecFactory.getCodec(info->outgoingCodec);
+				info->readedSize = codec->decode(decBuf, buf, info->readedSize); // TODO debug return number of bytes written
+
+				info->buf->putData(decBuf, info->readedSize);
 				cout << "[" << index << "] packet has been read\n";
 			}
-			
+
 			index++;
-		}	
-		
+		}
+
 		Thread::sleep(TimerPort::getTimer());
 		TimerPort::incTimer(10);
 	}
 }
 
 void MixerCoreTransmitter::run() {
-	
+
 	char *buf = new char[1024*1024*100];
+	char* encBuf = new char[1024*1024*100];
+	CodecFactory codecFactory;
 	int packetSize = 320;
-	
+
 	gettimeofday(&czas_start, NULL);
 	TimerPort::setTimer(20);
 	while(1) {
-		
+
 		if (this->buffer->getReadyCount() > packetSize) {
 			this->buffer->getData(buf, packetSize);
-		
+
 			// send
 			map<string, TerminalInfo*>::iterator iter;
 			for( iter = remoteHosts->begin(); iter != remoteHosts->end(); iter++ ) {
-			
+
 				TerminalInfo* info = iter->second;
 				if (info == NULL) {
 					continue;
 				}
-					
+
 				Transport *transport = info->transport;
 				if (transport == NULL) {
 					continue;
 				}
-						
-				transport->send(buf, packetSize);
+
+				// encode
+				Codec *codec = codecFactory.getCodec(info->incomingCodec);
+				codec->encode(encBuf, buf);
+
+				transport->send(encBuf, packetSize);
 				transport->flush();
 			}
-			
+
 // 			printTime();
 		}
-		
+
 		Thread::sleep(TimerPort::getTimer());
 		TimerPort::incTimer(20);
-	}	
+	}
 }
 
 /**
- * 
+ *
  */
 void MixerCore::run() {
 
@@ -134,17 +148,17 @@ void MixerCore::run() {
 	int count = 0;
 	int available = 0;
 	char* overallBuf = new char[1024*1024];
-	
+
 	for (int i = 0; i < 10; i++) {
 		bufs[i] = new char[1024*1024];
 	}
-	
+
 	TimerPort::setTimer(10);
 	while(1) {
-		
+
 		// Get data from all incoming streams
 		map<string, TerminalInfo*>::iterator iter;
-		
+
 		// read data
 		available = 1;
 		int index = 0;
@@ -153,20 +167,20 @@ void MixerCore::run() {
 			if (info == NULL || info->buf == NULL) {
 				continue;
 			}
-			
+
 // 			if (info->buf->getReadyCount() > packetSize*minPackThreshold ) {
 // 				cout << "[" << index << "]max threshold, ready: " << info->buf->getReadyCount() << endl;
 // 				info->buf->skipData(packetSize*minPackThreshold);
 // 				cout << "[" << index << "]max threshold, after: " << info->buf->getReadyCount() << endl;
 // 			}
-			
+
 			if (info->buf->getReadyCount() < packetSize*minPackThreshold ) {
 				cout << "[" << index << "]too little skipping\n";
 				available = 0;
 			}
 			index++;
-		}	
-		
+		}
+
 		count = 0;
 		if (available)  {
 			// read data
@@ -181,34 +195,46 @@ void MixerCore::run() {
 				}
 			}
 		}
-		
+
 		if (count > 0) {
-			// mix original solution
-			for (int i = 0; i < packetSize; i++) {
-				overallBuf[i] = 0; 
-				int pCount = count;
-				for (int j = 0; j < count; j++) {
-					if (ISQUIET(bufs[j][i])) pCount--;
-					else overallBuf[i] += bufs[j][i];
+//			 mix original solu]tion
+//			for (int i = 0; i < packetSize; i++) {
+//				overallBuf[i] = 0;
+//				int pCount = count;
+//				for (int j = 0; j < count; j++) {
+////					if (ISQUIET(bufs[j][i])) pCount--;
+////					else
+//						overallBuf[i] += bufs[j][i];
+//				}
+//				if (pCount != 0)
+//					overallBuf[i] /= pCount;
+//			}
+
+			signed short *pOverallBuf = (signed short*)overallBuf;
+			signed short **pBufs = (signed short**)bufs;
+
+			for (int i = 0; i < 160; ++i) {
+				pOverallBuf[i] = 0;
+				for (int j = 0; j < count; ++j) {
+					pOverallBuf[i] += pBufs[j][i];
 				}
-				if (pCount != 0)
-					overallBuf[i] /= pCount;
+				pOverallBuf[i] /= count;
 			}
-			
-// 			// mix Align-to-Average Weighted AAW
+
+ 			// mix Align-to-Average Weighted AAW
 // 			for (int i = 0; i < packetSize; i++) {
-// 				overallBuf[i] = 0; 
+// 				overallBuf[i] = 0;
 // 				for (int j = 0; j < count; j++) {
 // 					overallBuf[i] += bufs[j][i];
 // 				}
 // 				overallBuf[i] /= count;
 // 			}
-			
+
 // 			// mix Align-to-Greatest Weighted AGW
 // 			char totalMax = 0;
 // 			char mixedMax = 0;
 // 			for (int i = 0; i < packetSize; i++) {
-// 				overallBuf[i] = 0; 
+// 				overallBuf[i] = 0;
 // 				for (int j = 0; j < count; j++) {
 // 					if (bufs[j][i] > totalMax) totalMax = bufs[j][i];
 // 					overallBuf[i] += bufs[j][i];
@@ -220,10 +246,10 @@ void MixerCore::run() {
 // 			for (int i = 0; i < packetSize; i++) {
 // 				overallBuf[i] = overallBuf[i]*u*totalMax/mixedMax;
 // 			}
-			
+
 // 			// mix Align-to-Self Weighted ASW
 // 			for (int i = 0; i < packetSize; i++) {
-// 				overallBuf[i] = 0; 
+// 				overallBuf[i] = 0;
 // 				char sum = 0;
 // 				for (int j = 0; j < count; j++) {
 // 					overallBuf[i] += bufs[j][i]*bufs[j][i]*sgn(bufs[j][i]);
@@ -231,22 +257,23 @@ void MixerCore::run() {
 // 				}
 // 				overallBuf[i] /= sum;
 // 			}
-			
+
 // 			// mix Align-to-Energy Weighted AEW
 // 			for (int i = 0; i < packetSize; i++) {
-// 				overallBuf[i] = 0; 
+// 				overallBuf[i] = 0;
 // 				char sum = 0;
 // 				for (int j = 0; j < count; j++) {
 // 					overallBuf[i] += bufs[j][i]*bufs[j][i]*bufs[j][i];
 // 					sum += abs(bufs[j][i])*abs(bufs[j][i]);
 // 				}
+// 				if (sum == 0) sum = 1;
 // 				overallBuf[i] /= sum;
 // 			}
-			
+
 			buffer->putData(overallBuf, packetSize);
 			cout << "putted in buffor" << endl;
 		}
-				
+
 		Thread::sleep(TimerPort::getTimer());
 		TimerPort::incTimer(10);
 	}
