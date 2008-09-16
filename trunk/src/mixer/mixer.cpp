@@ -60,12 +60,12 @@ const int Mixer::defaultIcePort = 24474;
 const int Mixer::defaultRtpPort = 6014;
 
 class WorkerThread : public IceUtil::Thread {
-	private:
-		Mixer *mixer;
-		CallParametersResponse params;
-	public:
-		WorkerThread(Mixer* mixer, CallParametersResponse params);
-		virtual void run();
+private:
+	Mixer *mixer;
+	CallParametersResponse params;
+public:
+	WorkerThread(Mixer* mixer, CallParametersResponse params);
+	virtual void run();
 };
 
 WorkerThread::WorkerThread(Mixer* mixer, CallParametersResponse params) {
@@ -79,12 +79,12 @@ void WorkerThread::run() {
 
 
 Mixer::Mixer(int lIcePort) :
-			localRTPPort(defaultRtpPort),
-			localIcePort(lIcePort), localAddr(0),
-			remoteAddr(0), currentState(States::DISCONNECTED), ic(0), adapter(0) {
-	
+	localRTPPort(defaultRtpPort),
+	localIcePort(lIcePort), localAddr(0),
+	remoteAddr(0), currentState(States::DISCONNECTED), ic(0), adapter(0) {
+
 	cout << "Constructor of mixer" << endl;
-	
+
 	if ((localIcePort < 1024) || (localIcePort > 32768))
 		localIcePort = defaultIcePort;
 
@@ -96,21 +96,21 @@ Mixer::Mixer(int lIcePort) :
 	ISlavePtr localMixer = this;
 	adapter->add(localMixer, ic->stringToIdentity(remoteMixerName));
 	adapter->activate();
-	
+
 	// start core
 	mixerCore = new MixerCore(&(this->remoteHostsM));
 	mixerCore->start();
-	
+
 	LOG4CXX_DEBUG(logger, "Mixer::Mixer adapter activated()");
 	ic->waitForShutdown(); // TODO to remove
 }
 
 Mixer::~Mixer() {
-	
+
 	//adapter->deactivate();
 	//adapter->destroy();
 	//ic->destroy();
-	
+
 	if (localAddr) {
 		delete localAddr;
 	}
@@ -145,28 +145,28 @@ const IPV4Address* Mixer::getLocalHost() const {
 void Mixer::changeState(int newState) {
 	stringstream a;
 	LOG4CXX_DEBUG(logger, "Mixer::changeState()");
-	
+
 	a << string("Mixer::changeState() prev: ") << this->currentState << " new: " << newState;
 	LOG4CXX_DEBUG(logger, a.str());
 	this->currentState = newState;
 }
 
 TerminalCapabilities Mixer::remoteGetCapabilities(const ::Ice::Current& curr) {
-	// TODO	
+	// TODO
 }
 
 void Mixer::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::Identity& ident, const ::Ice::Current& curr) {
 	stringstream a;
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteTryConnect()"));
 	masterCallbackPrx = IMasterCallbackPrx::uncheckedCast(curr.con->createProxy(ident));
-	
+
 	if (localAddr) {
 		delete localAddr;
 	}
 	if (remoteAddr) {
 		delete remoteAddr;
 	}
-	
+
 	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
 	TerminalInfo *info = new TerminalInfo;
 	info->address = *tmpAddr;
@@ -176,17 +176,17 @@ void Mixer::remoteTryConnect(const ::agh::CallParameters& params, const ::Ice::I
 	info->transport = NULL;
 	info->readedSize = 0;
 	info->buf = NULL;
-	remoteHostsM[tmpAddr->getHostname()] = info; 
+	remoteHostsM[tmpAddr->getHostname()] = info;
 	a << "Mixer::remoteTryConnect() conf received, remote addr: " << tmpAddr << " port: " << params.masterRtpPort;
- 	LOG4CXX_DEBUG(logger, a.str());
-	
+	LOG4CXX_DEBUG(logger, a.str());
+
 	changeState(States::PASSIVE_CONNECTED);
-	
+
 	// inform remote site
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteTryConnect() sending ACK..."));
 	CallParametersResponse response;
 	response.slaveRtpPort = localRTPPort;
-	
+
 	// Response in new thread
 	WorkerThread* tmpThread = new WorkerThread(this, response);
 	tmpThread->start();
@@ -197,50 +197,50 @@ void Mixer::remoteStartTransmission(const ::Ice::Current& curr) {
 	stringstream a;
 	stringstream b;
 	LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission()"));
-	
- 	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
+
+	IPV4Address *tmpAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
 	a << string("Mixer::remoteStartTransmission() rem hostAddr: ") << tmpAddr->getHostname();
 	LOG4CXX_DEBUG(logger, a.str());
-	
+
 	TerminalInfo *info = remoteHostsM[tmpAddr->getHostname()];
 	if (remoteHostsM.find(tmpAddr->getHostname()) == remoteHostsM.end()  ) {
 		cout << "ERROR info not found\n";
 	}
-	
+
 	if (this->currentState != States::PASSIVE_CONNECTED) {
 		LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission() bad state"));
 	} else {
 		changeState(States::PASSIVE_OPERATIONAL);
 
 		cout << "TRANSCEIVER STARTED\n";
-		
+
 		// TODO start RTP.RTCP transmission
 		CodecFactory codecfactory;
 		Codec* codecInc = codecfactory.getCodec(AudioCodec::PCMU); // HACK
-// 		Codec* codecInc = codecfactory.getCodec(info->incomingCodec);
+		// 		Codec* codecInc = codecfactory.getCodec(info->incomingCodec);
 		Codec* codecOut = codecfactory.getCodec(AudioCodec::PCMU);
-//		Codec* codecOut = codecfactory.getCodec(info->outgoingCodec); // HACK
-			
+		//		Codec* codecOut = codecfactory.getCodec(info->outgoingCodec); // HACK
+
 		info->transport = new TransportCCRTP();
 		info->transport->setParams(codecInc->getFrameCount(), codecInc->getFrameSize());
 		info->transport->setLocalEndpoint("0.0.0.0", localRTPPort);
 		info->transport->setRemoteEndpoint(info->address, info->rtpPort);
 		info->buf = new RingBuffer(1024*1024, 1);
-// 		b << "Mixer::remoteStartTransmission() creating transport, 
-  		localRTPPort += 2;
-		
+		// 		b << "Mixer::remoteStartTransmission() creating transport,
+		localRTPPort += 2;
+
 		stringstream a;
 		a << "rem address: " << info->address << " port: " << info->rtpPort;
 		LOG4CXX_DEBUG(logger, a.str());
-		
+
 		info->transport->start();
-		
+
 		LOG4CXX_DEBUG(logger, string("Mixer::remoteStartTransmission() transmission started"));
 	}
 }
 
 void Mixer::remoteDisengage(const ::Ice::Current& curr) {
-	// TODO	 
+	// TODO
 }
 
 int Mixer::remotePing(const Ice::Current& curr) {
@@ -249,24 +249,71 @@ int Mixer::remotePing(const Ice::Current& curr) {
 }
 
 void Mixer::foo(const ::Ice::Current& curr) {
-	
+
 }
 
 } /* namespace agh */
 
-int main() {
-	
+int main(int argc, char **argv) {
+
+	int lIcePort;
+	int lRtpPort;
+	int rDirPort;
+	string rDirAddr;
+	string alias;
+	DirectoryPrx directory;
+
+	if (argc < 6) {
+		cout << "bad usage:\n\n";
+		cout << "\t\tprogram lIcePort lRtpPort rDirPort rDirAddr alias\n\n";
+		return 0;
+	}
+
+	/* arguments */
+	lIcePort = atoi(argv[1]);
+	lRtpPort = atoi(argv[2]);
+	rDirPort = atoi(argv[3]);
+	rDirAddr.append(argv[4]);
+	alias.append(argv[5]);
+
+	try {
+		/* locate directory */
+		Ice::CommunicatorPtr ic = Ice::initialize ();
+		stringstream a;
+		a << string("Directory") << ":default -h " << rDirAddr << " -p " << rDirPort;
+		Ice::ObjectPrx base = ic->stringToProxy ( a.str() );
+		directory = DirectoryPrx::checkedCast ( base );
+		if ( !directory )
+			throw "Invalid proxy";
+		/* log in */
+		TerminalAddress address;
+		address.name = alias;
+		std::ostringstream o2;
+		o2 << string("") << lIcePort;
+		address.port = o2.str();
+		address.type = MCUTERMINAL;
+
+		try {
+			directory->registerTerminal(address);
+		} catch(BadLoginException e) {
+			cerr << "Bad login\n";
+		} catch(TerminalExistsException e) {
+			cerr << "Terminal already exists\n";
+		}
+
+	} catch(...) {
+		clog << "Directory lookup error" << endl;
+	}
+
 	try {
 		// Set up a simple configuration that logs on the console.
 		BasicConfigurator::configure();
 	} catch(log4cxx::helpers::Exception& e) {
-		//clog << e.what() << endl;
+		clog << "severe error" << endl;
 	}
-	
-	Mixer m(12345);
-	m.setLocalRtpPort(22222);
-	
-	std::cout << "mixer is running...\n";
+
+	Mixer m(lIcePort);
+	m.setLocalRtpPort(lRtpPort);
 }
 
 

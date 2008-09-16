@@ -44,26 +44,33 @@ Transceiver* TransceiverFactory::getTransceiver(const string& audio, const strin
 	Transceiver* transceiver = new Transceiver();
 	Audio* a = NULL;
 	Transport* t = NULL;
-	
+
+	cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd1\n";
 	if(audio == "alsa") {
 		a = new AudioAlsa(transceiver);
+		cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd2\n";
 	} else if(audio == "pa") {
 		a = new AudioPa(transceiver);
+		cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd3\n";
 	} else {
 		return NULL;
 	}
-	
+	cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd4\n";
+
 	if(transport == "ccrtp") {
 		t = new TransportCCRTP();
 	} else {
 		delete a;
 		return NULL;
 	}
-	
+	cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd5\n";
+
 	transceiver->setAudio(a);
+	cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd6\n";
 	transceiver->setTransport(t);
-	
+	cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDdd7\n";
+
 	return transceiver;
 }
-	
+
 }

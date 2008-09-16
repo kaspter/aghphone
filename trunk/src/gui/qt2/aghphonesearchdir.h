@@ -21,17 +21,19 @@ class AghPhoneSearchDirDialog : public QDialog, public Ui_SearchDialog {
 		DirectoryPrx directory;
 		TerminalConfiguration *configuration;
 		TerminalAddress* selectedTerminal;
-		
+
 	public:
 		AghPhoneSearchDirDialog(QWidget* parent = 0);
 		void setConfiguration(TerminalConfiguration *configuration);
 		virtual void exec();
 		void putTerminalIntoList(TerminalAddress *terminal, QString alias);
+		void putTerminalIntoTable(TerminalAddress *terminal, QString alias);
 		TerminalAddress* getSelectedTerminal();
-	
+
 	private slots:
 		void searchButtonClicked();
 };
 
 #endif
+
 

@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'aghphonepref.h'
 **
-** Created: Fri Sep 12 18:33:52 2008
+** Created: Tue Sep 16 20:49:05 2008
 **      by: The Qt Meta Object Compiler version 59 (Qt 4.4.0)
 **
 ** WARNING! All changes made in this file will be lost!

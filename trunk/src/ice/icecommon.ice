@@ -3,6 +3,10 @@ module agh {
 	exception VoipException {
 	};
 	
+	enum TerminalType {
+		USERTERMINAL, MCUTERMINAL
+	};
+	
 	exception TerminalBusyException extends VoipException {
 	};
 	
@@ -34,6 +38,6 @@ module agh {
 		string ipAddress;
 		string port;
 		string name;
+		TerminalType type;
 	};
-	
 };

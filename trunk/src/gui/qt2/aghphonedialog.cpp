@@ -110,7 +110,7 @@ AghPhoneDialog::AghPhoneDialog(QWidget* parent) : QMainWindow(parent) {
 	prefDialog = new AghPhonePrefDialog();
 	searchDir = new AghPhoneSearchDirDialog();
 	trayIcon = new QSystemTrayIcon(this);
-	trayIcon->setIcon(QIcon("/home/maciej/workspaceCPPE/aghphone/src/common/icons/tray.png"));
+	trayIcon->setIcon(QIcon(":tray.png"));
 
 	connect(callButton, SIGNAL(clicked()), this, SLOT(callButtonClicked()));
 	connect(disengageButton, SIGNAL(clicked()), this, SLOT(disengageButtonClicked()));
@@ -173,8 +173,8 @@ void AghPhoneDialog::tempInit() {
 	searchDir->setConfiguration(configuration);
 
 	// icons
-	this->callButton->setIcon(QIcon("/home/maciej/workspaceCPPE/aghphone/src/common/icons/call.png"));
-	this->disengageButton->setIcon(QIcon("/home/maciej/workspaceCPPE/aghphone/src/common/icons/disengage.png"));
+	this->callButton->setIcon(QIcon(":call.png"));
+	this->disengageButton->setIcon(QIcon(":disengage.png"));
 	this->callButton->setText("");
 	this->disengageButton->setText("");
 }
@@ -467,6 +467,9 @@ void AghPhoneDialog::menuTriggered(QAction *action) {
 void AghPhoneDialog::stateTransitionSlot(int curState) {
 	string message;
 	if (curState == States::PASSIVE_CONNECTED) {
+		cout << "|||||||||: " << ringSound->isAvailable() << endl;
+		ringSound->play();
+
 		int ret = incCallDialog->exec();
 		if (ret == QMessageBox::Ok) {
 			cout << "Ok button clicked\n";
