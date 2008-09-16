@@ -38,11 +38,11 @@ namespace agh {
 class AudioAlsa : public Audio {
 private:
 	Transceiver *t;
-	
+
 	DeviceFactoryAlsa* devMgr;
 	const IDevice* inputDevice;
 	const IDevice* outputDevice;
-	
+
 	RingBuffer *outputBuffer;
 	RingBuffer *inputBuffer;
 
@@ -56,22 +56,23 @@ private:
 
 	struct timeval startMs;
 	struct timeval czas_start;
-	
+
 	void openStream();
+	void closeStream();
 	snd_pcm_t* alsa_set_params(snd_pcm_t *pcm_handle, int rw);
 	bool alsa_can_read(snd_pcm_t *dev, int frames);
 	void alsa_fill_w(snd_pcm_t *pcm_handle);
 	int alsa_read(snd_pcm_t *handle, unsigned char* buf, int nsamples);
 	int alsa_write(snd_pcm_t *handle, unsigned char* buf, int nsamples);
-	
+
 	void initTime();
 	void printTime();
 	void resetTimerMs();
 	long getTimeMs();
-	
-	
+
+
 public:
-	AudioAlsa(Transceiver *t); 
+	AudioAlsa(Transceiver *t);
 	~AudioAlsa();
 	void setTransceiver(Transceiver *t);
 	vector<IDevice*> getAvailableInputDevices() const;
@@ -87,10 +88,10 @@ public:
 
 	/*
 	 * sets size of a data chunk that will be read from buffer with getData()
-	 * @param size size of the packet [B]  
+	 * @param size size of the packet [B]
 	 */
 	void setPacketSize(long size) { framesPerBuffer = size; }
-	
+
 	/*
 	 * sets a value that will be multiplied by a packet size (see setPacketSize())
 	 * to form a minimum number of bytes in the buffer that will cause the audio thread
@@ -98,10 +99,10 @@ public:
 	 * @param m the multiplier
 	 */
 	void setJitterMultiplier(int m) { jitterMult = m; }
-	
+
 	int start();
 	int stop();
-	
+
 	/*
 	 * gets data from audio input, it will copy data from the input buffer to the
 	 * memory region pointed by dest, size of the requested data is set with setPacketSize
@@ -109,17 +110,17 @@ public:
 	 * @param size size in bytes of the data to be put in the dest
 	 */
 	bool getData(void* dest, long size);
-	
+
 	/*
 	 * puts data into the output buffer
 	 * @param[in] src pointer to the memory region from which data is to be read
 	 * @param size size of the data [B]
 	 */
-	
+
 	void putData(void* src, long size);
-	
+
 	void moveData(RingBuffer* dest, long size);
-	
+
 	void flush();
 	void read();
 };

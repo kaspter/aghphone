@@ -33,23 +33,23 @@ namespace agh {
 AudioAlsa::AudioAlsa(Transceiver *t)
 {
 	this->t = t;
-	
+
 	devMgr = new DeviceFactoryAlsa();
-	
+
 	setInputDevice(devMgr->getDefaultInputDevice());
 	setOutputDevice(devMgr->getDefaultOutputDevice());
-	
+
 	playback_handle = NULL;
 	capture_handle = NULL;
 	outputBuffer = NULL;
 	inputBuffer = NULL;
-		
+
 	initTime();
 	resetTimerMs();
 }
 
 AudioAlsa::~AudioAlsa()
-{	
+{
 	delete inputBuffer;
 	delete outputBuffer;
 	delete devMgr;
@@ -63,42 +63,42 @@ void AudioAlsa::setTransceiver(Transceiver *t)
 vector<IDevice*> AudioAlsa::getAvailableInputDevices() const
 {
 	vector<IDevice*> v;
-	
+
 	return v;
 }
 
 vector<IDevice*> AudioAlsa::getAvailableOutputDevices() const
 {
 	vector<IDevice*> v;
-	
+
 	return v;
 }
 
 int AudioAlsa::setInputDevice(const IDevice& dev)
 {
 	inputDevice = &dev;
-	
+
 	return 0;
 }
 
 int AudioAlsa::setInputDevice(const int id)
 {
 	//inputDevice = &devMgr->getDevice(id);
-	
+
 	return 0;
 }
 
 int AudioAlsa::setOutputDevice(const IDevice& dev)
 {
 	outputDevice = &dev;
-	
+
 	return 0;
 }
 
 int AudioAlsa::setOutputDevice(const int id)
 {
 	//outputDevice = &devMgr->getDevice(id);
-	
+
 	return 0;
 }
 
@@ -123,7 +123,7 @@ printf("framespb: %ld, packetsize: %d\n", framesPerBuffer, t->packetSize); fflus
 
 int AudioAlsa::stop()
 {
-	
+	closeStream();
 	return 0;
 }
 
@@ -131,29 +131,34 @@ void AudioAlsa::openStream()
 {
 	int err;
 	snd_output_t *log;
-	
+
 	snd_output_stdio_attach(&log, stderr, 0);
-	
+
 	//err = snd_pcm_open(&capture_handle, inputDevice->getName().c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
 	err = snd_pcm_open(&capture_handle, "plughw:0,0", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-	
+
 	if(err < 0) cout << "Alsa error : cannot open capture device (" << inputDevice->getName() << ") : " << snd_strerror(err) << endl;
-	
+
 	alsa_set_params(capture_handle, 0);
-	
+
 	cout << "[Capture device]:" << endl;
 	snd_pcm_dump(capture_handle, log);
-	
+
 	err = snd_pcm_open(&playback_handle, outputDevice->getName().c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	//err = snd_pcm_open(&playback_handle, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	
+
 	if(err < 0) cout << "Alsa error : cannot open playback device (" << outputDevice->getName() << "): " << snd_strerror(err) << endl;
-	
+
 	alsa_set_params(playback_handle, 1);
-	
+
 	cout << "[Playback device]:" << endl;
 	snd_pcm_dump(playback_handle, log);
-	
+
+}
+
+void AudioAlsa::closeStream()
+{
+	snd_pcm_close(&playback_handle);
 }
 
 snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
@@ -174,9 +179,9 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	snd_pcm_format_t format;
 	if(!rw) format = SND_PCM_FORMAT_S32;
 	else format = SND_PCM_FORMAT_S16;
-	
+
 	snd_pcm_hw_params_alloca(&hwparams);
-	
+
 	err = snd_pcm_hw_params_any(pcm_handle, hwparams);
 	if(err < 0) cout << "Alsa error: cannot initialize hw params structure : " << snd_strerror(err) << endl;
 	err = snd_pcm_hw_params_set_access(pcm_handle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
@@ -185,48 +190,48 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	if(err < 0) cout << "Alsa error: cannot set sample format : " << snd_strerror(err) << endl;
 	err = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, channels);
 	if(err < 0) cout << "Alsa error: cannot set channel count : " << snd_strerror(err) << endl;
-	
+
 	exact_uvalue = rate;
 	dir = 0;
 	err = snd_pcm_hw_params_set_rate_near(pcm_handle, hwparams, &exact_uvalue, &dir);
 	if(err < 0) cout << "Alsa error: cannot set sample rate : " << snd_strerror(err) << endl;
-	if(dir != 0) cout << "Alsa error: " << rate << 
+	if(dir != 0) cout << "Alsa error: " << rate <<
 		" Hz sample rate is not supported by your hardware. Using " << exact_uvalue << " Hz instead." << endl;
-	
+
 	periodsize = periodsize*(rate/8000);
 	exact_ulvalue=periodsize;
 	dir=0;
 	err = snd_pcm_hw_params_set_period_size_near(pcm_handle, hwparams, &exact_ulvalue, &dir);
 	if(err < 0) cout << "Alsa error: cannot set period size : " << snd_strerror(err) << endl;
-	if(dir != 0) cout << "Alsa error: " << periodsize << 
+	if(dir != 0) cout << "Alsa error: " << periodsize <<
 		" period size is not supported by your hardware. Using " << exact_ulvalue << " instead." << endl;
 	periodsize = exact_ulvalue;
 	this->framesPerBuffer = periodsize;
-		  
+
 	exact_uvalue=periods;
-	dir = 0; 
+	dir = 0;
 	err = snd_pcm_hw_params_set_periods_near(pcm_handle, hwparams, &exact_uvalue, &dir);
 	if(err < 0) cout << "Alsa error: cannot set periods : " << snd_strerror(err) << endl;
-	if(dir != 0) cout << "Alsa error: " << periods << 
+	if(dir != 0) cout << "Alsa error: " << periods <<
 		" periods is not supported by your hardware. Using " << exact_uvalue << " instead." << endl;
-	
+
 	err = snd_pcm_hw_params(pcm_handle, hwparams);
 	if(err < 0) cout << "Alsa error: cannot hw parameters : " << snd_strerror(err) << endl;
-	
+
 	if(rw) {
 		snd_pcm_sw_params_alloca(&swparams);
 		snd_pcm_sw_params_current(pcm_handle, swparams);
 		err = snd_pcm_sw_params_set_start_threshold(pcm_handle, swparams, periodsize*2);
 		if(err < 0) cout << "Alsa error: cannot start threshold : " << snd_strerror(err) << endl;
-		
+
 		err = snd_pcm_sw_params_set_stop_threshold(pcm_handle, swparams, periodsize*periods);
 		if(err < 0) cout << "Alsa error: cannot stop threshold : " << snd_strerror(err) << endl;
-		
+
 		err = snd_pcm_sw_params(pcm_handle, swparams);
 		if(err < 0) cout << "Alsa error: cannot start sw params : " << snd_strerror(err) << endl;
-	
+
 	}
-	
+
 	return 0;
 }
 
@@ -234,7 +239,7 @@ bool AudioAlsa::alsa_can_read(snd_pcm_t *dev, int frames)
 {
 	snd_pcm_sframes_t avail;
 	int err;
-	
+
 	avail = snd_pcm_avail_update(dev);
 	if(avail < 0) {
 		snd_pcm_drain(dev);
@@ -243,7 +248,7 @@ bool AudioAlsa::alsa_can_read(snd_pcm_t *dev, int frames)
 		err = snd_pcm_start(dev);
 		if(err) cout << "Alsa error: snd_pcm_start failed after recover on capture device : " << snd_strerror(err) << endl;
 	}
-	
+
 	return avail >= frames;
 }
 
@@ -260,7 +265,7 @@ int AudioAlsa::alsa_read(snd_pcm_t *handle, unsigned char* buf, int nsamples)
 			cout << "snd_pcm_readi return 0" << endl;
 		}
 	}
-	
+
 	return err;
 }
 
@@ -289,10 +294,10 @@ void AudioAlsa::alsa_fill_w(snd_pcm_t *pcm_handle)
 	snd_pcm_uframes_t buffer_size;
 	int buffer_size_bytes;
 	void *buffer;
-	
+
 	snd_pcm_hw_params_alloca(&hwparams);
 	snd_pcm_hw_params_current(pcm_handle, hwparams);
-	
+
 	snd_pcm_hw_params_get_channels(hwparams, (unsigned int*)&channels);
 	snd_pcm_hw_params_get_buffer_size(hwparams, &buffer_size);
 	buffer_size /= 2;
@@ -312,10 +317,10 @@ void AudioAlsa::initTime() {
 
 void AudioAlsa::printTime() {
 	struct timeval czas_teraz;
-	
+
 	gettimeofday(&czas_teraz, NULL);
-	
-	printf("%3ld.%3ld [s] ", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000); 
+
+	printf("%3ld.%3ld [s] ", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000);
 }
 
 void AudioAlsa::resetTimerMs() {
@@ -355,15 +360,15 @@ void AudioAlsa::moveData(RingBuffer* dest, long size)
 
 void AudioAlsa::flush()
 {
-	if(outputBuffer->getReadyCount() >= framesPerBuffer) { 
+	if(outputBuffer->getReadyCount() >= framesPerBuffer) {
 		char buf[2048];
 		outputBuffer->peekData(buf, framesPerBuffer);
-		
+
 	//	float nbuf[1024];
 	//	for(int i=0;i<framesPerBuffer;i++) {
 	//		nbuf[i] = (float) ( (float)( ( ( int16_t* ) buf )[i]) / (float)32768.0);
 	//	}
-				
+
 		int err = alsa_write(playback_handle, (unsigned char*)buf, framesPerBuffer);
 		if(err > 0) {
 			outputBuffer->skipData(err);
@@ -379,16 +384,16 @@ void AudioAlsa::read()
 	if(alsa_can_read(capture_handle, framesPerBuffer*(int)(sampleRate/8000.0))) {
 		char buf[2048];
 		int err = alsa_read(capture_handle, (unsigned char*)buf, (int)framesPerBuffer*(int)(sampleRate/8000.0));
-		
+
 		if(err <= 0) {
 			cout << "Failed to read samples from capture device : " << snd_strerror(err) << endl;
 		} else {
 			int16_t nbuf[1024];
-			
+
 			for(int i=0;i<err;i++) {
 				nbuf[i] = (int16_t) (  ( ( int32_t* ) buf )[i] >> 16 );
 			}
-			
+
 			inputBuffer->putData((char*)nbuf, err);
 		}
 	}
