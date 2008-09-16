@@ -24,66 +24,67 @@ class DirectoryImpl : public Directory
 Terminals DirectoryImpl::findTerminals(const string& name, const Ice::Current&) {
 	map<string, TerminalAddress>::iterator iter;
 	Terminals retTerminals;
-	
+
 	for( iter = terminals.begin(); iter != terminals.end(); iter++ ) {
 		if (iter->first.find(name) != string::npos)
 			retTerminals.push_back(iter->second);
 	}
-	
+
 	return retTerminals;
 }
 
 Terminals DirectoryImpl::getTerminals(const Ice::Current&) {
 	map<string, TerminalAddress>::iterator iter;
 	Terminals retTerminals;
-	
+
 	for( iter = terminals.begin(); iter != terminals.end(); iter++ ) {
 		retTerminals.push_back(iter->second);
 	}
-	
+
 	return retTerminals;
 }
 
 void DirectoryImpl::registerTerminal(const TerminalAddress& address, const Ice::Current& curr) {
-	
+
 	IPV4Address *remoteAddr = new IPV4Address(getRemoteAddressFromConnection(curr.con));
-	
+
 	TerminalAddress newAddress;
 	newAddress.name = address.name;
 	newAddress.ipAddress = remoteAddr->getHostname();
 	newAddress.port = address.port;
-	
+	newAddress.type = address.type;
+
 	if (newAddress.name == "") {
 		throw BadLoginException();
 	}
 	if (terminals.count(newAddress.name) > 0) {
 		throw TerminalExistsException();
 	}
-	
+
 	terminals[newAddress.name] = newAddress;
-	
+
 	cout << newAddress.name << " successfully registered [" << newAddress.ipAddress << ":" << newAddress.port << "]" << endl;
 }
 
 void DirectoryImpl::removeTerminal(const string& name, const Ice::Current&) {
-	
+
 	if (terminals.count(name) <= 0) {
 		throw NoSuchTerminalException();
 	}
-	
+
 	terminals.erase(name);
-	
+
 	cout << name << " successfully unregistered" << endl;
 }
 
 TerminalAddress DirectoryImpl::findTerminal(const string& name, const Ice::Current&) {
-	
+
 	if (terminals.count(name) <= 0) {
 		throw NoSuchTerminalException();
 	}
-	
+
 	TerminalAddress retAddress = terminals[name];
-	
+
 	return retAddress;
 }
 
@@ -94,27 +95,27 @@ int main ( int argc, char* argv[] )
 		cout << "usage: directory name port\n";
 		return 1;
 	}
-	
+
 	string name = argv[1];
 	string port = argv[2];
-	
+
 	int status = 0;
 	Ice::CommunicatorPtr ic;
 	try
 	{
 		ic = Ice::initialize ( );
 		stringstream iceEndpoint;
-		iceEndpoint << "default -p " << port;	
-		
+		iceEndpoint << "default -p " << port;
+
 		Ice::ObjectAdapterPtr adapter = ic->createObjectAdapterWithEndpoints(name,
 				iceEndpoint.str());
-		
+
 		Ice::ObjectPtr object = new DirectoryImpl;
 		adapter->add( object, ic->stringToIdentity(name));
 		adapter->activate();
-	
+
 		ic->waitForShutdown();
-	
+
 	}
 	catch ( const Ice::Exception& e )
 	{
@@ -138,6 +139,6 @@ int main ( int argc, char* argv[] )
 			status = 1;
 		}
 	}
-	
+
 	return status;
 }
