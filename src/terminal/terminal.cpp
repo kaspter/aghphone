@@ -82,6 +82,7 @@ Terminal::Terminal(int lIcePort) :
 
 Terminal::~Terminal() {
 
+	// MOT - throws exception??
 	//adapter->deactivate();
 	//adapter->destroy();
 	//ic->destroy();

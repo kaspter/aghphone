@@ -158,7 +158,7 @@ void AudioAlsa::openStream()
 
 void AudioAlsa::closeStream()
 {
-	snd_pcm_close(&playback_handle);
+	snd_pcm_close(playback_handle);
 }
 
 snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
