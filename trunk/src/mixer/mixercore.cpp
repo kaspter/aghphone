@@ -1,7 +1,26 @@
-#include <cc++/address.h>
-#include <time.h>
+/*
+ * Copyright (C) 2008  Mateusz Kramarczyk <kramarczyk (at) gmail (dot) com>
+ * Copyright (C) 2008  Tomasz Kijas <kijasek (at) gmail (dot) com>
+ * Copyright (C) 2008  Tomir Kryza <tkryza (at) gmail (dot) com>
+ * Copyright (C) 2008  Maciej Kluczny <kluczny (at) fr (dot) pl>
+ * Copyright (C) 2008  AGH University of Science and Technology <www.agh.edu.pl>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
 
-#define ISQUIET(x) x < -100
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <cc++/address.h>
+#include <ctime>
 
 #include "mixercore.h"
 #include "codecfactory.h"
@@ -36,14 +55,14 @@ MixerCoreTransmitter::MixerCoreTransmitter(map<string, TerminalInfo*>* remoteHos
 	this->buffer = buffer;
 }
 
-struct timeval czas_start;
+struct timeval start_time;
 
 void printTime() {
-	struct timeval czas_teraz;
+	struct timeval now;
 
-	gettimeofday(&czas_teraz, NULL);
+	gettimeofday(&now, NULL);
 
-	printf("%3ld.%3ld [s] \n", czas_teraz.tv_sec - czas_start.tv_sec, czas_teraz.tv_usec/1000);
+	printf("%3ld.%3ld [s] \n", now.tv_sec - start_time.tv_sec, now.tv_usec/1000);
 }
 
 void MixerCoreReceiver::run() {
@@ -99,7 +118,7 @@ void MixerCoreTransmitter::run() {
 	CodecFactory codecFactory;
 	int packetSize = 320;
 
-	gettimeofday(&czas_start, NULL);
+	gettimeofday(&start_time, NULL);
 	TimerPort::setTimer(20);
 	while(1) {
 
@@ -213,12 +232,11 @@ void MixerCore::run() {
 			signed short *pOverallBuf = (signed short*)overallBuf;
 			signed short **pBufs = (signed short**)bufs;
 
-			for (int i = 0; i < 160; ++i) {
+			for (unsigned int i = 0; i < packetSize / sizeof(short); ++i) {
 				pOverallBuf[i] = 0;
 				for (int j = 0; j < count; ++j) {
-					pOverallBuf[i] += pBufs[j][i];
+					pOverallBuf[i] += pBufs[j][i] / count;
 				}
-				pOverallBuf[i] /= count;
 			}
 
  			// mix Align-to-Average Weighted AAW
