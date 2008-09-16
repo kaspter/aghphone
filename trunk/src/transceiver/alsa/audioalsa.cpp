@@ -171,9 +171,7 @@ snd_pcm_t* AudioAlsa::alsa_set_params(snd_pcm_t *pcm_handle, int rw)
 	int channels = 1;
 	int err;
 	int rate = 8000;
-	/*
-	 * TODO : [!!!!!] check if periodsize is in samples or in bytes if in samples it should be 160
-	 */
+
 	int periodsize = 160;
 	int periods = 8;
 	snd_pcm_format_t format;
