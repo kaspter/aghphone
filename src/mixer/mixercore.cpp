@@ -163,7 +163,6 @@ void MixerCore::run() {
 	char** bufs = new char*[10];
 	int packetSize = 320;
 	int minPackThreshold = 2;
-	int maxPackThreshold = 6;
 	int count = 0;
 	int available = 0;
 	char* overallBuf = new char[1024*1024];
@@ -295,7 +294,7 @@ void MixerCore::run() {
 				int sum = 0;
 				for (int j = 0; j < count; ++j) {
 					temp += pBufs[j][i] * pBufs[j][i] * pBufs[j][i];
-					sum += abs(bufs[j][i]) * abs(bufs[j][i]);
+					sum += abs(pBufs[j][i]) * abs(pBufs[j][i]);
 				}
 				if (sum < 1) sum = 1;
 				temp /= sum;
