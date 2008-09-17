@@ -294,11 +294,11 @@ void MixerCore::run() {
 				int sum = 0;
 				for (int j = 0; j < count; ++j) {
 					temp += pBufs[j][i] * pBufs[j][i] * pBufs[j][i];
-					sum += abs(pBufs[j][i]) * abs(pBufs[j][i]);
+					sum += pBufs[j][i] * pBufs[j][i];
 				}
 				if (sum < 1) sum = 1;
 				temp /= sum;
-				pOverallBuf[i] = static_cast<signed short>(temp);
+				pOverallBuf[i] = (signed short) (temp);
 			}
 			
 			buffer->putData(overallBuf, packetSize);
