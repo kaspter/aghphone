@@ -233,12 +233,12 @@ void MixerCore::run() {
 
 			
 			// This one is likely to work correctly
-//			for (unsigned int i = 0; i < packetSize / sizeof(short); ++i) {
-//				pOverallBuf[i] = 0;
-//				for (int j = 0; j < count; ++j) {
-//					pOverallBuf[i] += pBufs[j][i] / count;
-//				}
-//			}
+			for (unsigned int i = 0; i < packetSize / sizeof(short); ++i) {
+				pOverallBuf[i] = 0;
+				for (int j = 0; j < count; ++j) {
+					pOverallBuf[i] += pBufs[j][i] / count;
+				}
+			}
 
  			// mix Align-to-Average Weighted AAW
 // 			for (int i = 0; i < packetSize; i++) {
@@ -289,17 +289,17 @@ void MixerCore::run() {
 // 				overallBuf[i] /= sum;
 // 			}
 
-			for (unsigned int i = 0; i < packetSize / sizeof(signed short); ++i) {
-				int temp = 0;
-				int sum = 0;
-				for (int j = 0; j < count; ++j) {
-					temp += pBufs[j][i] * pBufs[j][i] * pBufs[j][i];
-					sum += pBufs[j][i] * pBufs[j][i];
-				}
-				if (sum < 1) sum = 1;
-				temp /= sum;
-				pOverallBuf[i] = (signed short) (temp);
-			}
+//			for (unsigned int i = 0; i < packetSize / sizeof(signed short); ++i) {
+//				int temp = 0;
+//				int sum = 0;
+//				for (int j = 0; j < count; ++j) {
+//					temp += pBufs[j][i] * pBufs[j][i] * pBufs[j][i];
+//					sum += pBufs[j][i] * pBufs[j][i];
+//				}
+//				if (sum < 1) sum = 1;
+//				temp /= sum;
+//				pOverallBuf[i] = (signed short) (temp);
+//			}
 			
 			buffer->putData(overallBuf, packetSize);
 			cout << "putted in buffor" << endl;
