@@ -5,7 +5,7 @@ sources += $(local_src)
 programs += $(bin_dir)/qtgui
 extra_clean += $(local_dir)/Makefile $(local_dir)/moc_* $(local_dir)/ui_*.h
 
-qtgui_objs := directory/directory.o gui/dummyui.o common/globals.o common/configuration.o \
+qtgui_objs := directory/directory.o gui/dummyui.o common/globals.o \
 	common/tools.o common/codecfactory.o common/ringbuffer.o ice/iface.o ice/icecommon.o \
 	transceiver/ccrtp/aghrtpsession.o common/codecs/dummycodec.o \
 	transceiver/alsa/devicealsa.o transceiver/alsa/devicefactoryalsa.o \

@@ -8,7 +8,7 @@ DEPENDPATH += .
 INCLUDEPATH += . 
 
 # Input
-HEADERS += aghphonepref.h aghphonedialog.h aghphonesearchdir.h
+HEADERS += configuration.h aghphonepref.h aghphonedialog.h aghphonesearchdir.h
 FORMS += aghphonepref.ui aghphonesearchdir.ui aghphonedialog.ui 
-SOURCES += aghphonepref.cpp aghphonesearchdir.cpp aghphonedialog.cpp main.cpp
+SOURCES += configuration.cpp aghphonepref.cpp aghphonesearchdir.cpp aghphonedialog.cpp main.cpp
 RESOURCES += aghphonedialog.qrc
