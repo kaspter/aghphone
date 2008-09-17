@@ -232,12 +232,14 @@ void MixerCore::run() {
 			signed short *pOverallBuf = (signed short*)overallBuf;
 			signed short **pBufs = (signed short**)bufs;
 
-			for (unsigned int i = 0; i < packetSize / sizeof(short); ++i) {
-				pOverallBuf[i] = 0;
-				for (int j = 0; j < count; ++j) {
-					pOverallBuf[i] += pBufs[j][i] / count;
-				}
-			}
+			
+			// This one is likely to work correctly
+//			for (unsigned int i = 0; i < packetSize / sizeof(short); ++i) {
+//				pOverallBuf[i] = 0;
+//				for (int j = 0; j < count; ++j) {
+//					pOverallBuf[i] += pBufs[j][i] / count;
+//				}
+//			}
 
  			// mix Align-to-Average Weighted AAW
 // 			for (int i = 0; i < packetSize; i++) {
@@ -288,6 +290,18 @@ void MixerCore::run() {
 // 				overallBuf[i] /= sum;
 // 			}
 
+			for (unsigned int i = 0; i < packetSize / sizeof(signed short); ++i) {
+				int temp = 0;
+				int sum = 0;
+				for (int j = 0; j < count; ++j) {
+					temp += pBufs[j][i] * pBufs[j][i] * pBufs[j][i];
+					sum += abs(bufs[j][i]) * abs(bufs[j][i]);
+				}
+				if (sum < 1) sum = 1;
+				temp /= sum;
+				pOverallBuf[i] = static_cast<signed short>(temp);
+			}
+			
 			buffer->putData(overallBuf, packetSize);
 			cout << "putted in buffor" << endl;
 		}
