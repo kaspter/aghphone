@@ -91,6 +91,8 @@ void AghPhoneSearchDirDialog::exec() {
 			a << *(configuration->directoryName)
 			<< ":default -h " << *(configuration->directoryAddress)
 			<< " -p " << *(configuration->directoryPort);
+			cout << a.str() << endl;
+
 			Ice::ObjectPrx base = ic->stringToProxy ( a.str() );
 			directory = DirectoryPrx::checkedCast ( base );
 

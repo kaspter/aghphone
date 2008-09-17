@@ -16,7 +16,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget" >
      <property name="currentIndex" >
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab" >
       <property name="geometry" >
@@ -281,6 +281,47 @@
       <attribute name="title" >
        <string>Conferences</string>
       </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_8" >
+       <item>
+        <widget class="QGroupBox" name="groupBox_5" >
+         <property name="title" >
+          <string>Mixer configuration</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout" >
+          <item row="0" column="0" >
+           <widget class="QLabel" name="label_6" >
+            <property name="text" >
+             <string>Mixer Ice port:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" >
+           <widget class="QLineEdit" name="mixerICEPortEdit" />
+          </item>
+          <item row="1" column="0" >
+           <widget class="QLabel" name="label_7" >
+            <property name="text" >
+             <string>Mixer local RTP port</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" >
+           <widget class="QLabel" name="label_8" >
+            <property name="text" >
+             <string>Mixer alias:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" >
+           <widget class="QLineEdit" name="mixerRTPPortEdit" />
+          </item>
+          <item row="2" column="1" >
+           <widget class="QLineEdit" name="mixerAliasEdit" />
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>

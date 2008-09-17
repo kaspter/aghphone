@@ -168,7 +168,8 @@ void AghPhoneDialog::trayActivated(QSystemTrayIcon::ActivationReason reason) {
 void AghPhoneDialog::tempInit() {
 
 	// configuration class - initalization & propagation to the preference dialog
-	configuration->setDefultValues();
+//	configuration->setDefultValues();
+	configuration->loadConf();
 	prefDialog->setConfiguration(configuration);
 	searchDir->setConfiguration(configuration);
 
@@ -293,6 +294,7 @@ void AghPhoneDialog::menuTriggered(QAction *action) {
 	if (operation == "Preferences") {
 		prefDialog->exec();
 		prefDialog->updateConfiguration();
+		configuration->saveConf();
 	} else if (operation == "Close") {
 		terminateApplication();
 	} else if (operation == "Search in directory") {
@@ -467,8 +469,6 @@ void AghPhoneDialog::menuTriggered(QAction *action) {
 void AghPhoneDialog::stateTransitionSlot(int curState) {
 	string message;
 	if (curState == States::PASSIVE_CONNECTED) {
-		cout << "|||||||||: " << ringSound->isAvailable() << endl;
-		ringSound->play();
 
 		int ret = incCallDialog->exec();
 		if (ret == QMessageBox::Ok) {
@@ -478,6 +478,7 @@ void AghPhoneDialog::stateTransitionSlot(int curState) {
 			p->start();
 		} else if (ret == QMessageBox::Cancel) {
 			cout << "Cancel button clicked\n";
+			masterCallback->remoteTryConnectNack();
 		}
 	}
 	else if (curState == States::ACTIVE_CONNECTED) {
