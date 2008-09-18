@@ -3,16 +3,24 @@
 
 module agh {
 
+	/**
+	 * The callback local terminal registers in remote terminal
+	 * remoteTryConnectAck -> notifies local terminal when user accept incoming call
+	 * remoteTryConnectNack -> opposite to remoteTryConnectAck
+	 */
 	interface IMasterCallback {
 	
 		void remoteTryConnectAck(CallParametersResponse response);	
 		void remoteTryConnectNack();
 	};
 	
-	interface IMixer {
-		void foo();
-	};
-	
+	/**
+	 * a part of remote terminal interface
+	 * remoteGetCapabilities -> gets remote terminal's capabilities
+	 * remoteTryConnect -> tries connect to remote terminal
+	 * remoteStartTransmission -> starts remote transceiver
+	 * remoteDisengage -> disconnects remote terminal
+	 */
 	interface ISlave {
 		
 		TerminalCapabilities remoteGetCapabilities();
